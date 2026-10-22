@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ระบบหลังบ้าน อบต.ปุโรง </title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/admin.css">
+</head>
+<body class="admin">
+
+<!-- ===== login ===== -->
+<div class="login hidden" id="login">
+  <div class="login-card">
+    <span id="login-logo"></span>
+    <h1>ระบบหลังบ้าน<br>LINE OA อบต.ปุโรง</h1>
+    <p class="sub">สำหรับเจ้าหน้าที่ องค์การบริหารส่วนตำบลปุโรง</p>
+    <form id="login-form">
+      <div class="f"><label for="u">ชื่อผู้ใช้</label><input class="inp" id="u" autocomplete="username" value="admin"></div>
+      <div class="f"><label for="p">รหัสผ่าน</label><input class="inp" id="p" type="password" autocomplete="current-password" placeholder="••••••"></div>
+      <label class="chk"><input type="checkbox" id="remember" checked> จดจำการเข้าสู่ระบบในเครื่องนี้</label>
+      <div class="err" id="err"></div>
+      <button class="abtn pri block">เข้าสู่ระบบ</button>
+    </form>
+    <div class="hint">บัญชีทดลอง: <code>admin</code> / <code>1234</code> · ข้อมูลทั้งหมดเป็นตัวอย่าง</div>
+  </div>
+</div>
+
+<!-- ===== app ===== -->
+<div class="app hidden" id="app">
+  <aside class="side">
+    <div class="brand"><span id="side-logo"></span><div><b>อบต.ปุโรง</b><small>ระบบหลังบ้าน LINE OA</small></div></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="me">
+      <span class="av" id="me-av"></span>
+      <div><b id="me-name"></b><small id="me-role"></small></div>
+      <button id="logout" title="ออกจากระบบ" aria-label="ออกจากระบบ"></button>
+    </div>
+  </aside>
+  <main class="main" id="main"></main>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+const { icon, seal, thDate, hhmm, ymd, fromYmd, ST, QST, NEWS_CAT, DEPTS, ORG, TH_DAY } = PR;
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const when = (ms) => `${thDate(new Date(ms))} · ${hhmm(new Date(ms))} น.`;
+let db = PR.store.get();
+const save = () => PR.store.save();
+
+/* ---------- auth (mock) ---------- */
+const USERS = {
+  admin: { name: "นางสาวนูรีซัน ดอเลาะ", role: "ผู้ดูแลระบบ", dept: "สำนักปลัด", pass: "1234" },
+  chang: { name: "นายสุริยา แสงทอง", role: "เจ้าหน้าที่", dept: "กองช่าง", pass: "1234" },
+  klang: { name: "นางสาวอามีเนาะ สาแม", role: "เจ้าหน้าที่", dept: "กองคลัง", pass: "1234" },
+};
+const SESSION_KEY = "purong-admin-session";
+const getSession = () => { try { return sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY); } catch (e) { return null; } };
+function setSession(u, remember) {
+  try {
+    sessionStorage.setItem(SESSION_KEY, u);
+    if (remember) localStorage.setItem(SESSION_KEY, u);
+  } catch (e) { /* storage blocked */ }
+}
+function clearSession() { try { sessionStorage.removeItem(SESSION_KEY); localStorage.removeItem(SESSION_KEY); } catch (e) {} }
+let me = null;
+
+$("#login-logo").innerHTML = seal(88);
+$("#side-logo").innerHTML = seal(40);
+$("#logout").innerHTML = `<span style="font-size:12.5px;font-weight:600">ออกจากระบบ</span>`;
+$("#login-form").onsubmit = async (e) => {
+  e.preventDefault();
+  const u = $("#u").value.trim().toLowerCase(), user = USERS[u];
+  if (!user || $("#p").value !== user.pass) { $("#err").textContent = "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"; return; }
+  await PR.loading(600);
+  setSession(u, $("#remember").checked);
+  start(u);
+};
+$("#logout").onclick = () => { clearSession(); location.hash = ""; location.reload(); };
+
+/* ---------- shell ---------- */
+const VIEWS = {
+  dash: ["แดชบอร์ด", "chart"],
+  complaints: ["เรื่องร้องเรียน", "megaphone"],
+  queues: ["คิวบริการ", "calendar"],
+  news: ["ข่าวสาร / ประกาศ", "news"],
+  broadcast: ["ส่งข้อความ LINE", "send"],
+  settings: ["ตั้งค่า", "user"],
+};
+function drawNav(cur) {
+  const wait = db.complaints.filter((c) => c.s === "wait").length;
+  const today = db.queues.filter((q) => q.day === ymd(new Date()) && (q.s === "q" || q.s === "called")).length;
+  const badge = { complaints: wait, queues: today };
+  $("#nav").innerHTML = Object.entries(VIEWS).map(([k, [label, ic]]) =>
+    `<a href="#${k}" class="${k === cur ? "on" : ""}">${icon(ic === "chart" ? "star" : ic, 18)}${label}${badge[k] ? `<span class="n">${badge[k]}</span>` : ""}</a>`).join("");
+}
+function start(u) {
+  me = { id: u, ...USERS[u] };
+  $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
+  $("#me-av").textContent = me.name.replace(/^(นาย|นางสาว|นาง)/, "").charAt(0);
+  $("#me-name").textContent = me.name;
+  $("#me-role").textContent = `${me.role} · ${me.dept}`;
+  route();
+}
+function route() {
+  const v = location.hash.slice(1) in VIEWS ? location.hash.slice(1) : "dash";
+  drawNav(v);
+  RENDER[v]();
+  document.title = `${VIEWS[v][0]} · ระบบหลังบ้าน อบต.ปุโรง`;
+  window.scrollTo(0, 0);
+}
+window.addEventListener("hashchange", () => me && route());
+const pageHead = (title, sub, act = "") => `<div class="top"><div><h1>${title}</h1><div class="sub">${sub}</div></div><div class="act">${act}</div></div>`;
+function refresh() { drawNav(location.hash.slice(1) in VIEWS ? location.hash.slice(1) : "dash"); }
+
+/* ---------- modal / drawer ---------- */
+function openPanel(html, { center = false } = {}) {
+  closePanel();
+  const s = document.createElement("div");
+  s.className = "scrim" + (center ? " center" : "");
+  s.id = "scrim";
+  s.innerHTML = `<div class="drawer" role="dialog" aria-modal="true">${html}</div>`;
+  s.onclick = (e) => { if (e.target === s || e.target.closest("[data-close]")) closePanel(); };
+  document.body.appendChild(s);
+  document.body.style.overflow = "hidden";
+  return s;
+}
+function closePanel() { $("#scrim")?.remove(); document.body.style.overflow = ""; }
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePanel(); });
+const dh = (title, sub = "") => `<div class="dh"><div><h3>${title}</h3>${sub ? `<small>${sub}</small>` : ""}</div><button class="x" data-close aria-label="ปิด">${icon("close", 20)}</button></div>`;
+
+/* ---------- tooltip ---------- */
+const tip = document.createElement("div");
+tip.className = "tip hidden";
+document.body.appendChild(tip);
+document.addEventListener("mousemove", (e) => {
+  const t = e.target.closest("[data-tip]");
+  if (!t) return tip.classList.add("hidden");
+  tip.innerHTML = t.dataset.tip;
+  tip.classList.remove("hidden");
+  const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8);
+  tip.style.left = x + "px"; tip.style.top = e.clientY + 16 + "px";
+});
+
+/* ============================================================
+   views
+   ============================================================ */
+const RENDER = {};
+
+/* ---------- dashboard ---------- */
+RENDER.dash = () => {
+  const C = db.complaints, today = ymd(new Date());
+  const cnt = (s) => C.filter((c) => c.s === s).length;
+  const tq = db.queues.filter((q) => q.day === today).sort((a, b) => a.time.localeCompare(b.time));
+  const left = tq.filter((q) => q.s === "q" || q.s === "called").length;
+  const rated = C.filter((c) => c.rating);
+  const avg = rated.length ? (rated.reduce((n, c) => n + c.rating, 0) / rated.length).toFixed(1) : "–";
+  const byCat = Object.entries(C.reduce((m, c) => ((m[c.cat] = m[c.cat] || { n: 0, wait: 0, doing: 0, done: 0 }), m[c.cat].n++, m[c.cat][c.s]++, m), {}))
+    .sort((a, b) => b[1].n - a[1].n);
+  const max = Math.max(1, ...byCat.map(([, v]) => v.n));
+
+  $("#main").innerHTML = pageHead(`สวัสดี ${esc(me.name.split(" ")[0])}`, `${TH_DAY[new Date().getDay()]} ${thDate(new Date(), true)} · ภาพรวมบริการผ่าน LINE OA`,
+    `<a class="abtn" href="index.html" target="_blank">${icon("share", 16)} เปิดหน้า LINE OA</a>`) + `
+    <div class="tiles">
+      <div class="tile"><div class="k"><i style="background:var(--warn)"></i>เรื่องใหม่ รอตรวจสอบ</div><div class="v">${cnt("wait")}</div><div class="s">ควรตอบรับภายใน 1 วันทำการ</div></div>
+      <div class="tile"><div class="k"><i style="background:var(--info)"></i>กำลังดำเนินการ</div><div class="v">${cnt("doing")}</div><div class="s">เสร็จสิ้นแล้ว ${cnt("done")} เรื่อง</div></div>
+      <div class="tile"><div class="k"><i style="background:#6a3bbf"></i>คิววันนี้</div><div class="v">${tq.length}</div><div class="s">รอให้บริการอีก ${left} คิว</div></div>
+      <div class="tile"><div class="k"><i style="background:var(--line)"></i>ผู้ติดตาม LINE OA</div><div class="v">${db.followers.toLocaleString("th-TH")}</div><div class="s">ความพึงพอใจเฉลี่ย ${avg} / 5</div></div>
+    </div>
+    <div class="cols">
+      <div class="panel">
+        <h2>เรื่องร้องเรียนล่าสุด <a href="#complaints">ดูทั้งหมด</a></h2>
+        <div class="rows">${C.slice().sort((a, b) => b.created - a.created).slice(0, 5).map((c) => `
+          <a class="rowi" href="#complaints" data-open="${c.id}"><span class="ic">${icon(c.ic, 18)}</span>
+            <span class="tx"><b>${esc(c.t)}</b><small>${c.id} · ${esc(c.v)} · ${when(c.created)}</small></span>
+            <span class="pill ${c.s}">${ST[c.s]}</span></a>`).join("")}</div>
+      </div>
+      <div class="panel">
+        <h2>คิววันนี้ <a href="#queues">จัดการคิว</a></h2>
+        <div class="rows">${tq.length ? tq.slice(0, 6).map((q) => `
+          <div class="rowi"><span class="ic" style="background:#f1e8ff;color:#6a3bbf">${q.id}</span>
+            <span class="tx"><b>${esc(q.svc)}</b><small>${q.time} น. · ${esc(q.name)}</small></span>
+            <span class="pill ${q.s}">${QST[q.s]}</span></div>`).join("") : `<div class="empty">ไม่มีคิวในวันนี้</div>`}</div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h2>จำนวนเรื่องร้องเรียนตามประเภท <small style="font-weight:500;color:var(--ink-3);font-size:12.5px">ทั้งหมด ${C.length} เรื่อง</small></h2>
+      <div class="bars">${byCat.map(([k, v]) => `
+        <div class="bar" data-tip="<b>${esc(k)}</b><br>${v.n} เรื่อง · รอตรวจสอบ ${v.wait} · กำลังดำเนินการ ${v.doing} · เสร็จสิ้น ${v.done}">
+          <span>${esc(k)}</span><span class="tr"><span class="fl" style="display:block;width:${(v.n / max) * 100}%"></span></span><b>${v.n}</b></div>`).join("")}</div>
+    </div>`;
+  $("#main").querySelectorAll("[data-open]").forEach((a) => a.onclick = () => { pendingOpen = a.dataset.open; });
+};
+
+/* ---------- complaints ---------- */
+let cf = { s: "all", dept: "", q: "" }, pendingOpen = null;
+RENDER.complaints = () => {
+  const n = (s) => db.complaints.filter((c) => s === "all" || c.s === s).length;
+  $("#main").innerHTML = pageHead("เรื่องร้องเรียน / แจ้งเหตุ", "รับเรื่องจาก LINE OA · ตรวจสอบ มอบหมาย และแจ้งผลกลับผู้แจ้ง") + `
+    <div class="panel">
+      <div class="filters">
+        <div class="segs" id="cf-s">${[["all", "ทั้งหมด"], ["wait", ST.wait], ["doing", ST.doing], ["done", ST.done]].map(([k, l]) =>
+          `<button data-k="${k}" class="${cf.s === k ? "on" : ""}">${l}<small>${n(k)}</small></button>`).join("")}</div>
+        <select class="sel" id="cf-d"><option value="">ทุกหน่วยงาน</option>${DEPTS.map((d) => `<option ${cf.dept === d ? "selected" : ""}>${d}</option>`).join("")}</select>
+        <input class="inp" id="cf-q" placeholder="ค้นหาเลขที่ / หัวเรื่อง / ผู้แจ้ง" value="${esc(cf.q)}">
+      </div>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>เลขที่</th><th>เรื่อง</th><th>พื้นที่</th><th>หน่วยงาน</th><th>วันที่แจ้ง</th><th>สถานะ</th></tr></thead><tbody id="ctb"></tbody></table></div>
+    </div>`;
+  $("#cf-s").onclick = (e) => { const b = e.target.closest("button"); if (b) { cf.s = b.dataset.k; RENDER.complaints(); } };
+  $("#cf-d").onchange = (e) => { cf.dept = e.target.value; drawCRows(); };
+  $("#cf-q").oninput = (e) => { cf.q = e.target.value; drawCRows(); };
+  drawCRows();
+  if (pendingOpen) { openComplaint(pendingOpen); pendingOpen = null; }
+};
+function drawCRows() {
+  const q = cf.q.trim().toLowerCase();
+  const rows = db.complaints
+    .filter((c) => (cf.s === "all" || c.s === cf.s) && (!cf.dept || c.dept === cf.dept) && (!q || [c.id, c.t, c.name, c.cat].join(" ").toLowerCase().includes(q)))
+    .sort((a, b) => b.created - a.created);
+  $("#ctb").innerHTML = rows.length ? rows.map((c) => `
+    <tr class="click" data-id="${c.id}">
+      <td class="nw mono">${c.id}</td>
+      <td class="t"><b>${esc(c.t)}</b><small>${esc(c.cat)}</small></td>
+      <td class="nw">${esc(c.v)}</td>
+      <td class="nw">${esc(c.dept)}</td>
+      <td class="nw">${thDate(new Date(c.created))}<br><small>${hhmm(new Date(c.created))} น.</small></td>
+      <td><span class="pill ${c.s}">${ST[c.s]}</span></td>
+    </tr>`).join("") : `<tr><td colspan="6"><div class="empty">ไม่พบรายการ</div></td></tr>`;
+  $("#ctb").onclick = (e) => { const r = e.target.closest("tr[data-id]"); if (r) openComplaint(r.dataset.id); };
+}
+function openComplaint(id) {
+  const c = db.complaints.find((x) => x.id === id);
+  if (!c) return;
+  const s = openPanel(`${dh(c.id, `แจ้งเมื่อ ${when(c.created)}`)}
+    <div class="db">
+      <div><span class="pill ${c.s}">${ST[c.s]}</span><h3 style="font-size:17px;line-height:1.45;margin-top:8px">${esc(c.t)}</h3></div>
+      <div class="kv">
+        <span>ประเภท</span><b>${esc(c.cat)}</b>
+        <span>พื้นที่</span><b>${esc(c.v)}</b>
+        <span>ผู้แจ้ง</span><b>${c.anon || !c.name ? "ไม่ประสงค์ออกนาม" : `${esc(c.name)} · ${esc(c.tel)}`}</b>
+        <span>รูปภาพ / พิกัด</span><b>${c.photos || 0} รูป · ${c.located ? "ระบุพิกัดแล้ว" : "ไม่ได้ระบุพิกัด"}</b>
+        ${c.rating ? `<span>ความพึงพอใจ</span><b>${"★".repeat(c.rating)}${"☆".repeat(5 - c.rating)}</b>` : ""}
+      </div>
+      <div class="box">${esc(c.detail || c.t)}</div>
+      <div class="sec-t">ประวัติการดำเนินการ</div>
+      <ul class="log">${c.log.slice().reverse().map((e) => `<li><b>${esc(e.b)}</b><small>${when(e.at)}${e.by ? " · " + esc(e.by) : ""}</small>${e.p ? `<p>${esc(e.p)}</p>` : ""}</li>`).join("")}</ul>
+      <div class="sec-t">อัปเดตเรื่องนี้</div>
+      <div class="grid2">
+        <div class="f"><label for="c-s">สถานะ</label><select class="sel" id="c-s">${Object.entries(ST).map(([k, l]) => `<option value="${k}" ${c.s === k ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+        <div class="f"><label for="c-d">หน่วยงานรับผิดชอบ</label><select class="sel" id="c-d">${DEPTS.map((d) => `<option ${c.dept === d ? "selected" : ""}>${d}</option>`).join("")}</select></div>
+      </div>
+      <div class="f"><label for="c-n">ความคืบหน้า / ข้อความถึงผู้แจ้ง</label><textarea class="ta" id="c-n" placeholder="เช่น ลงพื้นที่ตรวจสอบแล้ว จะดำเนินการซ่อมภายใน 3 วัน"></textarea></div>
+      <label class="chk"><input type="checkbox" id="c-push" ${c.anon ? "disabled" : "checked"}> แจ้งผู้แจ้งทาง LINE ${c.anon ? "(ไม่ประสงค์ออกนาม ส่งไม่ได้)" : ""}</label>
+    </div>
+    <div class="df">
+      <a class="abtn" href="track.html?id=${encodeURIComponent(c.id)}" target="_blank">มุมมองประชาชน</a>
+      <button class="abtn pri" id="c-save">บันทึก</button>
+    </div>`);
+  $("#c-save", s).onclick = () => {
+    const ns = $("#c-s", s).value, nd = $("#c-d", s).value, note = $("#c-n", s).value.trim();
+    if (ns === c.s && nd === c.dept && !note) return PR.toast("ยังไม่มีการเปลี่ยนแปลง");
+    const b = ns !== c.s ? (ns === "done" ? "เสร็จสิ้น" : ns === "doing" ? "เริ่มดำเนินการ" : "เปลี่ยนสถานะเป็นรอตรวจสอบ")
+      : nd !== c.dept ? "ส่งต่อ" + nd : "อัปเดตความคืบหน้า";
+    c.log.push({ at: Date.now(), b: nd !== c.dept && ns !== c.s ? `${b} · ส่งต่อ${nd}` : b, p: note, by: me.name });
+    c.s = ns; c.dept = nd;
+    save(); closePanel(); RENDER.complaints(); refresh();
+    PR.toast(`บันทึก ${c.id} แล้ว` + ($("#c-push", s).checked ? " · ส่งแจ้งเตือนทาง LINE" : ""));
+  };
+}
+
+/* ---------- queues ---------- */
+let qday = ymd(new Date()), qdept = "";
+RENDER.queues = () => {
+  const dayList = [];
+  for (let i = 0; dayList.length < 7; i++) { const d = new Date(); d.setDate(d.getDate() + i); if (d.getDay() % 6) dayList.push(ymd(d)); }
+  if (!dayList.includes(qday)) dayList.unshift(qday);
+  const list = db.queues.filter((q) => q.day === qday && (!qdept || q.dept === qdept)).sort((a, b) => a.time.localeCompare(b.time));
+  const cur = list.find((q) => q.s === "called");
+  const next = list.find((q) => q.s === "q");
+  const isToday = qday === ymd(new Date());
+  $("#main").innerHTML = pageHead("คิวบริการ", "คิวที่ประชาชนจองผ่าน LINE · เรียกคิวและบันทึกการให้บริการ") + `
+    <div class="board">
+      <div class="now">
+        <small>${isToday ? "กำลังให้บริการ" : "คิวแรกของวัน"}${qdept ? " · " + esc(qdept) : ""}</small>
+        <div class="q">${cur ? cur.id : isToday ? "–" : next ? next.id : "–"}</div>
+        <small>${cur ? esc(cur.svc) : next ? "ถัดไป " + next.id + " · " + next.time + " น." : "ไม่มีคิวรอ"}</small>
+        ${isToday ? `<button class="abtn" id="call" ${next || cur ? "" : "disabled"}>${icon("megaphone", 16)} เรียกคิวถัดไป</button>` : ""}
+      </div>
+      <div class="panel">
+        <h2>เลือกวัน</h2>
+        <div class="days-row" id="qdays">${dayList.map((d) => {
+          const dt = fromYmd(d), n = db.queues.filter((q) => q.day === d && (!qdept || q.dept === qdept)).length;
+          return `<button data-d="${d}" class="${d === qday ? "on" : ""}"><small>${d === ymd(new Date()) ? "วันนี้" : TH_DAY[dt.getDay()]}</small><b>${dt.getDate()}</b><span>${n} คิว</span></button>`;
+        }).join("")}</div>
+        <div class="filters" style="margin:12px 0 0">
+          <select class="sel" id="qdept"><option value="">ทุกหน่วยงาน</option>${DEPTS.slice(0, 4).map((d) => `<option ${qdept === d ? "selected" : ""}>${d}</option>`).join("")}</select>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>รายการคิว ${thDate(fromYmd(qday), true)}</h2>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>คิว</th><th>เวลา</th><th>บริการ</th><th>ผู้จอง</th><th>สถานะ</th><th></th></tr></thead><tbody>${list.length ? list.map((q) => `
+        <tr data-id="${q.id}">
+          <td class="mono">${q.id}</td><td class="nw">${q.time} น.</td>
+          <td class="t"><b>${esc(q.svc)}</b><small>${esc(q.dept)}</small></td>
+          <td class="nw">${esc(q.name)}<br><small>${esc(q.tel)}${q.vill ? " · " + esc(q.vill) : ""}</small></td>
+          <td><span class="pill ${q.s}">${QST[q.s]}</span></td>
+          <td><div class="acts">${q.s === "q" ? `<button class="abtn sm" data-a="called">เรียก</button><button class="abtn sm danger" data-a="cancel">ไม่มา</button>`
+            : q.s === "called" ? `<button class="abtn sm pri" data-a="done">เสร็จสิ้น</button>` : `<button class="abtn sm" data-a="q">คืนสถานะ</button>`}</div></td>
+        </tr>`).join("") : `<tr><td colspan="6"><div class="empty">ไม่มีคิวในวันนี้</div></td></tr>`}</tbody></table></div>
+    </div>`;
+  $("#qdays").onclick = (e) => { const b = e.target.closest("button"); if (b) { qday = b.dataset.d; RENDER.queues(); } };
+  $("#qdept").onchange = (e) => { qdept = e.target.value; RENDER.queues(); };
+  $("#main tbody").onclick = (e) => {
+    const b = e.target.closest("[data-a]"); if (!b) return;
+    const q = db.queues.find((x) => x.id === b.closest("tr").dataset.id && x.day === qday);
+    setQ(q, b.dataset.a);
+  };
+  const call = $("#call");
+  if (call) call.onclick = () => { if (cur) setQ(cur, "done", true); if (next) setQ(next, "called"); };
+};
+function setQ(q, s, quiet) {
+  if (s === "called") db.queues.filter((x) => x.day === q.day && x.dept === q.dept && x.s === "called").forEach((x) => (x.s = "done"));
+  q.s = s;
+  save(); RENDER.queues(); refresh();
+  if (!quiet) PR.toast(s === "called" ? `เรียกคิว ${q.id} · ส่งแจ้งเตือนทาง LINE แล้ว` : `คิว ${q.id}: ${QST[s]}`);
+}
+
+/* ---------- news ---------- */
+RENDER.news = () => {
+  const list = db.news.slice().sort((a, b) => b.at - a.at);
+  $("#main").innerHTML = pageHead("ข่าวสาร / ประกาศ", "ข่าวที่เผยแพร่จะแสดงในเมนู ข่าวสาร ของ LINE OA ทันที",
+    `<button class="abtn pri" id="add">${icon("plus", 16)} เพิ่มข่าว</button>`) + `
+    <div class="panel"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>หัวข้อ</th><th>หมวด</th><th>วันที่</th><th>อ่าน</th><th>สถานะ</th><th></th></tr></thead><tbody>${list.map((n) => `
+      <tr data-id="${n.id}">
+        <td class="t"><b>${esc(n.t)}</b>${n.body ? `<small>${esc(n.body.slice(0, 80))}</small>` : ""}</td>
+        <td class="nw"><span class="pill" style="background:${NEWS_CAT[n.cat][1]}1a;color:${NEWS_CAT[n.cat][1]}">${NEWS_CAT[n.cat][0]}</span></td>
+        <td class="nw">${thDate(new Date(n.at))}</td>
+        <td class="nw mono">${n.reads}</td>
+        <td class="nw"><span class="pill ${n.pub ? "done" : "cancel"}">${n.pub ? "เผยแพร่" : "ฉบับร่าง"}</span></td>
+        <td><div class="acts"><button class="abtn sm" data-a="edit">แก้ไข</button><button class="abtn sm" data-a="pub">${n.pub ? "ซ่อน" : "เผยแพร่"}</button><button class="abtn sm danger" data-a="del">ลบ</button></div></td>
+      </tr>`).join("")}</tbody></table></div></div>`;
+  $("#add").onclick = () => editNews();
+  $("#main tbody").onclick = (e) => {
+    const b = e.target.closest("[data-a]"); if (!b) return;
+    const n = db.news.find((x) => x.id === b.closest("tr").dataset.id);
+    if (b.dataset.a === "edit") return editNews(n);
+    if (b.dataset.a === "pub") { n.pub = !n.pub; save(); RENDER.news(); return PR.toast(n.pub ? "เผยแพร่แล้ว" : "ซ่อนข่าวแล้ว"); }
+    if (b.dataset.a === "del" && confirm(`ลบข่าว “${n.t}” ?`)) { db.news = db.news.filter((x) => x !== n); save(); RENDER.news(); PR.toast("ลบข่าวแล้ว"); }
+  };
+};
+function editNews(n) {
+  const s = openPanel(`${dh(n ? "แก้ไขข่าว" : "เพิ่มข่าว / ประกาศ")}
+    <div class="db">
+      <div class="f"><label for="n-c">หมวด</label><select class="sel" id="n-c">${Object.entries(NEWS_CAT).map(([k, v]) => `<option value="${k}" ${n?.cat === k ? "selected" : ""}>${v[0]}</option>`).join("")}</select></div>
+      <div class="f"><label for="n-t">หัวข้อ <em style="color:var(--danger)">*</em></label><input class="inp" id="n-t" value="${esc(n?.t)}"></div>
+      <div class="f"><label for="n-b">รายละเอียด</label><textarea class="ta" id="n-b" style="min-height:130px">${esc(n?.body)}</textarea></div>
+      <label class="chk"><input type="checkbox" id="n-p" ${!n || n.pub ? "checked" : ""}> เผยแพร่ทันที</label>
+      ${n ? "" : `<label class="chk"><input type="checkbox" id="n-bc"> ส่งข้อความแจ้งผู้ติดตามทั้งหมด (Broadcast)</label>`}
+    </div>
+    <div class="df"><button class="abtn" data-close>ยกเลิก</button><button class="abtn pri" id="n-save">บันทึก</button></div>`, { center: true });
+  $("#n-save", s).onclick = () => {
+    const t = $("#n-t", s).value.trim();
+    if (!t) { $("#n-t", s).focus(); return PR.toast("กรุณาใส่หัวข้อ"); }
+    const v = { cat: $("#n-c", s).value, t, body: $("#n-b", s).value.trim(), pub: $("#n-p", s).checked };
+    if (n) Object.assign(n, v);
+    else db.news.push({ id: "n" + Date.now(), at: Date.now(), reads: 0, ...v });
+    const bc = !n && $("#n-bc", s).checked;
+    if (bc) db.broadcasts.unshift({ at: Date.now(), to: "ทุกคน", text: `📢 ${t}\nอ่านต่อได้ที่เมนู ข่าวสาร / ประกาศ`, sent: db.followers });
+    save(); closePanel(); RENDER.news();
+    PR.toast(bc ? "บันทึกและส่ง Broadcast แล้ว" : "บันทึกข่าวแล้ว");
+  };
+}
+
+/* ---------- broadcast ---------- */
+RENDER.broadcast = () => {
+  const share = [0.27, 0.31, 0.22, 0.2]; // สัดส่วนผู้ติดตามตามหมู่บ้าน (ตัวอย่าง)
+  const targets = [["all", "ผู้ติดตามทั้งหมด", db.followers], ...ORG.villages.map((v, i) => [String(i), v, Math.round(db.followers * share[i])])];
+  $("#main").innerHTML = pageHead("ส่งข้อความ LINE (Broadcast)", "ส่งประกาศถึงผู้ติดตาม LINE OA ทั้งหมดหรือรายหมู่บ้าน") + `
+    <div class="bc">
+      <div class="panel" style="display:grid;gap:14px">
+        <div class="f"><label for="b-to">ส่งถึง</label><select class="sel" id="b-to">${targets.map(([k, l, n]) => `<option value="${k}">${l} (${n.toLocaleString("th-TH")} คน)</option>`).join("")}</select></div>
+        <div class="f"><label for="b-t">ข้อความ <small id="b-n" style="font-weight:400;color:var(--ink-3)">0 / 500</small></label><textarea class="ta" id="b-t" maxlength="500" style="min-height:150px" placeholder="เช่น 📢 แจ้งปิดน้ำประปาหมู่ที่ 2 วันพรุ่งนี้ 09:00–15:00 น. เพื่อซ่อมท่อเมน"></textarea></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end"><button class="abtn pri" id="b-send" disabled>${icon("send", 16)} ส่งข้อความ</button></div>
+      </div>
+      <div><div class="pv"><div class="hd">${seal(28)}อบต.ปุโรง</div><div class="bub" id="b-pv"><span class="ph">ตัวอย่างข้อความจะแสดงที่นี่</span></div></div></div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h2>ประวัติการส่ง</h2>
+      <div class="rows">${db.broadcasts.length ? db.broadcasts.map((b) => `
+        <div class="rowi"><span class="ic">${icon("send", 18)}</span><span class="tx"><b>${esc(b.text.split("\n")[0])}</b><small>${when(b.at)} · ${esc(b.to)} · ส่งถึง ${b.sent.toLocaleString("th-TH")} คน</small></span></div>`).join("") : `<div class="empty">ยังไม่เคยส่ง</div>`}</div>
+    </div>`;
+  const t = $("#b-t");
+  t.oninput = () => {
+    $("#b-n").textContent = `${t.value.length} / 500`;
+    $("#b-pv").innerHTML = t.value.trim() ? esc(t.value) : `<span class="ph">ตัวอย่างข้อความจะแสดงที่นี่</span>`;
+    $("#b-send").disabled = !t.value.trim();
+  };
+  $("#b-send").onclick = async () => {
+    const [, label, n] = targets.find(([k]) => k === $("#b-to").value);
+    if (!confirm(`ส่งข้อความถึง ${label} (${n.toLocaleString("th-TH")} คน) ?`)) return;
+    await PR.loading(800);
+    db.broadcasts.unshift({ at: Date.now(), to: label, text: t.value.trim(), sent: n });
+    save(); RENDER.broadcast(); PR.toast(`ส่งข้อความถึง ${n.toLocaleString("th-TH")} คนแล้ว`);
+  };
+};
+
+/* ---------- settings ---------- */
+RENDER.settings = () => {
+  $("#main").innerHTML = pageHead("ตั้งค่า", "บัญชีเจ้าหน้าที่และข้อมูลระบบ") + `
+    <div class="panel">
+      <h2>บัญชีเจ้าหน้าที่</h2>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>ชื่อ</th><th>ชื่อผู้ใช้</th><th>สิทธิ์</th><th>หน่วยงาน</th></tr></thead><tbody>${Object.entries(USERS).map(([u, x]) => `
+        <tr><td class="nw"><b>${esc(x.name)}</b>${u === me.id ? ` <span class="pill done">คุณ</span>` : ""}</td><td class="mono">${u}</td><td>${x.role}</td><td class="nw">${x.dept}</td></tr>`).join("")}</tbody></table></div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h2>ข้อมูลหน่วยงาน</h2>
+      <div class="kv"><span>ชื่อ</span><b>${ORG.name}</b><span>ที่อยู่</span><b>${ORG.address}</b><span>เว็บไซต์</span><b>${ORG.web}</b><span>เวลาทำการ</span><b>จ.–ศ. 08:30–16:30 น.</b></div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h2>ข้อมูลตัวอย่าง</h2>
+      <p style="color:var(--ink-2);font-size:13.5px;line-height:1.6;margin-bottom:12px">ข้อมูลในระบบนี้เป็นตัวอย่าง เก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น หน้า LIFF (ร้องเรียน / จองคิว / ติดตามสถานะ / ข่าวสาร) ใช้ข้อมูลชุดเดียวกัน</p>
+      <button class="abtn danger" id="reset">รีเซ็ตข้อมูลตัวอย่าง</button>
+    </div>`;
+  $("#reset").onclick = () => { if (confirm("ล้างข้อมูลที่แก้ไขทั้งหมดและกลับไปใช้ข้อมูลตัวอย่างเริ่มต้น?")) { db = PR.store.reset(); refresh(); PR.toast("รีเซ็ตข้อมูลแล้ว"); } };
+};
+
+/* keep in sync when a LIFF page in another tab adds data */
+window.addEventListener("storage", (e) => { if (e.key === "purong-mockup-v1" && me && !$("#scrim")) { location.reload(); } });
+
+/* ---------- boot ---------- */
+const sess = getSession();
+if (sess && USERS[sess]) start(sess);
+else { $("#login").classList.remove("hidden"); $("#p").focus(); }
+</script>
+</body>
+</html>

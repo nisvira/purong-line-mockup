@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ติดต่อ อบต.ปุโรง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="stage">
+  <div class="phone">
+    <div id="head"></div>
+    <div class="liff-body">
+      <div class="hero-band">
+        <span class="seal" id="seal"></span>
+        <h1>ติดต่อ อบต.ปุโรง</h1>
+        <p id="addr"></p>
+      </div>
+      <div class="section lift">
+        <div class="card" style="padding:0;overflow:hidden">
+          <div class="mapbox" style="height:150px;border:0;border-radius:0">
+            <div class="river"></div>
+            <div class="road" style="left:0;right:0;top:55%;height:10px"></div>
+            <div class="road" style="left:38%;top:0;bottom:0;width:8px"></div>
+            <span class="pin" id="pinic" style="left:40%;top:22%"></span>
+            <span class="lbl">ห่างที่ว่าการอำเภอกรงปินัง ~8 กม. · ศาลากลางยะลา ~18 กม.</span>
+          </div>
+          <div style="display:flex;gap:8px;padding:12px">
+            <button class="btn primary" style="height:40px;font-size:14px" onclick="PR.toast('เปิด Google Maps')" id="nav"></button>
+            <button class="btn ghost" style="height:40px;font-size:14px" onclick="PR.toast('คัดลอกที่อยู่แล้ว')">คัดลอกที่อยู่</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>เวลาทำการ</h3>
+          <div class="sum">
+            <div class="r"><span>จันทร์ – ศุกร์</span><span>08:30 – 16:30 น.</span></div>
+            <div class="r"><span>พักกลางวัน</span><span>12:00 – 13:00 น.</span></div>
+            <div class="r"><span>เสาร์ – อาทิตย์ / วันหยุดราชการ</span><span style="color:var(--danger)">ปิดทำการ</span></div>
+          </div>
+          <div class="notice" style="margin-top:12px"><span id="al"></span>เหตุด่วน / สาธารณภัย นอกเวลาราชการ ติดต่อศูนย์ป้องกันฯ อบต. หรือสายด่วน 1784</div>
+        </div>
+
+        <div class="card">
+          <h3>หน่วยงานภายใน</h3>
+          <div id="depts"></div>
+        </div>
+
+        <div class="card">
+          <h3>หมู่บ้านในเขตตำบลปุโรง</h3>
+          <div id="vills"></div>
+        </div>
+
+        <div class="grid2" style="margin-bottom:12px">
+          <a class="quick-act" href="#" onclick="PR.toast('เปิดเว็บไซต์ www.pu-rong.go.th');return false"><span class="ci" style="background:#0a6b34" id="ic-web"></span>เว็บไซต์ อบต.</a>
+          <a class="quick-act" href="#" onclick="PR.toast('เปิด Facebook Page');return false"><span class="ci" style="background:#1877f2" id="ic-fb"></span>Facebook</a>
+        </div>
+        <p style="text-align:center;font-size:12px;color:var(--ink-3)">เบอร์โทรศัพท์เป็นตัวอย่าง (XXXX) — ใส่เบอร์จริงก่อนใช้งาน</p>
+      </div>
+    </div>
+    <div class="home-ind"></div>
+  </div>
+  <aside class="notes"></aside>
+</div>
+<script src="assets/app.js"></script>
+<script>
+const { icon } = PR;
+const $ = (s) => document.querySelector(s);
+$("#head").innerHTML = PR.liffHeader("ติดต่อ อบต.");
+$("#seal").innerHTML = PR.seal(80);
+$("#addr").textContent = PR.ORG.address;
+$("#pinic").innerHTML = `<svg width="34" height="34" viewBox="0 0 24 24"><path fill="currentColor" d="M12 22s-7-6.3-7-12a7 7 0 0 1 14 0c0 5.7-7 12-7 12Z"/><circle cx="12" cy="10" r="2.6" fill="#fff"/></svg>`;
+$("#nav").innerHTML = icon("map", 18) + "นำทาง";
+$("#al").innerHTML = icon("alert", 16);
+$("#ic-web").innerHTML = icon("globe", 20);
+$("#ic-fb").innerHTML = icon("fb", 20);
+
+const DEPTS = [
+  ["building", "สำนักปลัด", "งานทั่วไป · สวัสดิการ · ป้องกันฯ", "ต่อ 11"],
+  ["coin", "กองคลัง", "ภาษี · ค่าธรรมเนียม · การเงิน", "ต่อ 12"],
+  ["road", "กองช่าง", "ถนน · ไฟฟ้า · ประปา · ขออนุญาตก่อสร้าง", "ต่อ 13"],
+  ["house", "กองการศึกษา ศาสนาและวัฒนธรรม", "ศูนย์พัฒนาเด็กเล็ก · กิจกรรม", "ต่อ 14"],
+  ["shield", "หน่วยตรวจสอบภายใน", "รับเรื่องทุจริต / ประพฤติมิชอบ", "ต่อ 15"],
+];
+$("#depts").innerHTML = DEPTS.map(([ic, n, d, ext]) => `
+  <div class="contact-row"><span class="ci">${icon(ic, 18)}</span>
+    <span class="tx"><b>${n}</b><small>${d}</small><small>0-7329-XXXX ${ext}</small></span>
+    <button class="act" onclick="PR.toast('โทรออก: ${n}')">โทร</button></div>`).join("");
+$("#vills").innerHTML = PR.ORG.villages.map((v) => `
+  <div class="contact-row"><span class="ci">${icon("pin", 18)}</span><span class="tx"><b>${v}</b></span></div>`).join("");
+</script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ข่าวสาร อบต.ปุโรง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="stage">
+  <div class="phone">
+    <div id="head"></div>
+    <div class="liff-body">
+      <div class="hero-band" style="padding-bottom:18px">
+        <span class="seal" id="seal"></span>
+        <h1>ข่าวสาร / ประกาศ</h1>
+        <p>ประชาสัมพันธ์และกิจกรรมของ อบต.ปุโรง</p>
+      </div>
+      <div style="height:12px"></div>
+      <div class="tabs" id="tabs"></div>
+      <div class="section">
+        <div class="card" id="list"></div>
+        <p style="text-align:center;font-size:12px;color:var(--ink-3)">หัวข้อข่าวอ้างอิงจาก www.pu-rong.go.th · วันที่เป็นตัวอย่าง</p>
+      </div>
+    </div>
+    <div class="home-ind"></div>
+  </div>
+  <aside class="notes"></aside>
+</div>
+<script src="assets/app.js"></script>
+<script>
+const { icon, thDate } = PR;
+const $ = (s) => document.querySelector(s);
+$("#head").innerHTML = PR.liffHeader("ข่าวสาร / ประกาศ");
+$("#seal").innerHTML = PR.seal(80);
+
+const C = PR.NEWS_CAT;
+const NEWS = PR.store.get().news.filter((n) => n.pub).sort((a, b) => b.at - a.at);
+const esc = (t) => t.replace(/</g, "&lt;");
+let cur = "all";
+$("#tabs").innerHTML = [["all", "ทั้งหมด"], ...Object.entries(C).map(([k, v]) => [k, v[0]])]
+  .map(([k, l]) => `<button data-k="${k}" class="${k === cur ? "on" : ""}">${l}</button>`).join("");
+$("#tabs").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; cur = b.dataset.k; document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("on", x === b)); draw(); };
+function draw() {
+  $("#list").innerHTML = NEWS.filter((n) => cur === "all" || n.cat === cur).map(({ cat: k, t, at, reads: r }) => `
+    <a class="news-item" href="#" onclick="PR.toast('เปิดรายละเอียดข่าว');return false">
+      <span class="thumb" style="background:linear-gradient(135deg,${C[k][1]},${C[k][1]}cc)">${icon(C[k][2], 28, 1.6)}</span>
+      <span><h4>${esc(t)}</h4><small><span class="pill" style="background:${C[k][1]}1a;color:${C[k][1]};padding:0 7px">${C[k][0]}</span> · ${thDate(new Date(at))} · อ่าน ${r} คน</small></span>
+    </a>`).join("");
+}
+draw();
+</script>
+</body>
+</html>

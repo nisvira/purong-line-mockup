@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แบบ Rich Menu อบต.ปุโรง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body { background: #eef2f0; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 16px 60px; }
+  .top { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: space-between; margin-bottom: 16px; }
+  .top h1 { font-size: 24px; color: var(--brand); }
+  .top p { color: var(--ink-2); font-size: 14px; }
+  .tools { display: flex; gap: 8px; }
+  .tools button, .tools a { padding: 8px 14px; border-radius: 10px; background: #fff; border: 1px solid var(--border); font-size: 13.5px; font-weight: 600; }
+  .tools .on { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+  /* full-size canvas 2500x1686, scaled to fit */
+  .fit { width: 100%; aspect-ratio: 2500/1686; position: relative; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.15); background: #fff; }
+  .rm { position: absolute; left: 0; top: 0; width: 2500px; height: 1686px; transform-origin: 0 0; display: grid;
+        grid-template-columns: 833px 834px 833px; grid-template-rows: 440px 623px 623px;
+        background: #0a5e30; gap: 6px; font-family: var(--font); }
+  .rm .bn { grid-column: 1/-1; display: flex; align-items: center; gap: 44px; padding: 0 80px; color: #fff;
+            background: linear-gradient(110deg, #0d7a3d 0%, #0a5e30 70%), #0a5e30; border-bottom: 18px solid var(--gold); position: relative; overflow: hidden; }
+  .rm .bn::after { content: ""; position: absolute; right: -120px; top: -160px; width: 760px; height: 760px; border-radius: 50%; border: 60px solid rgba(255,255,255,.06); }
+  .rm .bn h2 { font-size: 112px; line-height: 1.05; font-weight: 800; }
+  .rm .bn p { font-size: 54px; opacity: .88; }
+  .rm .bn .pl { margin-left: auto; background: var(--gold); color: #3b2a00; font-size: 50px; font-weight: 800; padding: 22px 46px; border-radius: 80px; position: relative; z-index: 1; }
+  .rm .tl { background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; text-align: center; position: relative; }
+  .rm .tl .ic { width: 230px; height: 230px; border-radius: 60px; display: grid; place-items: center; color: #fff; }
+  .rm .tl b { font-size: 84px; line-height: 1.1; color: var(--ink); }
+  .rm .tl small { font-size: 50px; color: var(--ink-3); }
+  .rm .tl .hot { position: absolute; top: 40px; right: 40px; background: var(--danger); color: #fff; font-size: 44px; font-weight: 800; padding: 8px 30px; border-radius: 40px; }
+  .rm .area { display: none; position: absolute; inset: 0; border: 6px dashed #ff2d6f; background: rgba(255,45,111,.07); color: #ff2d6f; font: 700 44px/1.3 ui-monospace, Consolas, monospace; padding: 22px; text-align: left; align-items: flex-start; justify-content: flex-start; z-index: 2; }
+  .show-areas .rm .area { display: flex; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 22px; }
+  @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+  .panel { background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.05); min-width: 0; }
+  .panel h3 { font-size: 16px; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--ink-3); font-weight: 600; font-size: 12px; }
+  td code { font-size: 12px; background: var(--bg); padding: 1px 5px; border-radius: 5px; word-break: break-all; }
+  pre { background: #12201a; color: #d9f2e2; border-radius: 10px; padding: 14px; font-size: 12px; line-height: 1.55; overflow: auto; max-height: 420px; }
+  ol.how { padding-left: 20px; font-size: 13.5px; color: var(--ink-2); line-height: 1.8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>แบบ Rich Menu · อบต.ปุโรง</h1>
+      <p>ขนาดจริง 2500 × 1686 px (Large) · 6 ปุ่ม + แถบชื่อหน่วยงาน · <a href="index.html" style="color:var(--info)">← กลับไปหน้า mockup</a></p>
+    </div>
+    <div class="tools">
+      <button id="tg">แสดงพื้นที่กด (areas)</button>
+    </div>
+  </div>
+
+  <div class="fit" id="fit">
+    <div class="rm" id="rm">
+      <div class="bn" style="position:relative">
+        <span id="seal"></span>
+        <div><h2>อบต.ปุโรง e-Service</h2><p>บริการประชาชน 24 ชั่วโมง ผ่าน LINE</p></div>
+        <span class="pl">อ.กรงปินัง จ.ยะลา</span>
+        <span class="area">banner · ไม่มี action</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h3>พื้นที่ปุ่ม (bounds) และ action</h3>
+      <table><thead><tr><th>#</th><th>ปุ่ม</th><th>x, y, w, h</th><th>action</th></tr></thead><tbody id="tbl"></tbody></table>
+    </div>
+    <div class="panel">
+      <h3>JSON สำหรับ Messaging API</h3>
+      <pre id="json"></pre>
+    </div>
+    <div class="panel" style="grid-column:1/-1">
+      <h3>วิธีนำไปใช้งานจริง</h3>
+      <ol class="how">
+        <li>Capture ส่วนภาพด้านบนเป็น PNG/JPEG ขนาด 2500×1686 (ไม่เกิน 1 MB) หรือออกแบบใหม่ใน Figma ตามสัดส่วนนี้</li>
+        <li>สร้าง LIFF app ใน LINE Developers Console สำหรับหน้า ร้องเรียน / จองคิว / ติดตามสถานะ แล้วแทนที่ <code>LIFF_ID_*</code></li>
+        <li><code>POST https://api.line.me/v2/bot/richmenu</code> ด้วย JSON ด้านบน → อัปโหลดรูปที่ <code>/richmenu/{id}/content</code> → ตั้งเป็นค่าเริ่มต้นด้วย <code>/user/all/richmenu/{id}</code></li>
+        <li>ปุ่ม postback (ข่าว / ภาษี / ติดต่อ) ให้ webhook ตอบกลับเป็น Flex Message ตามตัวอย่างในหน้าแชท</li>
+        <li>หรือใช้ LINE Official Account Manager → Rich menus → Template “Large 6 ช่อง” แล้วกำหนด action เอง (ไม่ต้องเขียนโค้ด)</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+const { icon } = PR;
+const $ = (s) => document.querySelector(s);
+$("#seal").innerHTML = PR.seal(300);
+
+const BTN = [
+  ["megaphone", "#d64545", "ร้องเรียน / แจ้งเหตุ", "ไฟดับ ถนน ขยะ น้ำ", { type: "uri", label: "ร้องเรียน", uri: "https://liff.line.me/LIFF_ID_COMPLAINT" }, true],
+  ["calendar", "#0a6b34", "จองคิวบริการ", "ไม่ต้องรอนาน", { type: "uri", label: "จองคิว", uri: "https://liff.line.me/LIFF_ID_BOOKING" }],
+  ["search", "#2a72d4", "ติดตามสถานะ", "เรื่อง / คิวของฉัน", { type: "uri", label: "ติดตาม", uri: "https://liff.line.me/LIFF_ID_TRACK" }],
+  ["news", "#c9971c", "ข่าวสาร / ประกาศ", "กิจกรรม อบต.", { type: "postback", label: "ข่าวสาร", data: "action=news", displayText: "ข่าวสาร / ประกาศ" }],
+  ["coin", "#0f8c8c", "ภาษี & ค่าธรรมเนียม", "ที่ดิน ป้าย ขยะ", { type: "postback", label: "ภาษี", data: "action=tax", displayText: "ภาษี & ค่าธรรมเนียม" }],
+  ["phone", "#7a4cc2", "ติดต่อ อบต.", "เบอร์โทร แผนที่", { type: "postback", label: "ติดต่อ", data: "action=contact", displayText: "ติดต่อ อบต." }],
+];
+const COLS = [[0, 833], [833, 834], [1667, 833]], ROWS = [[440, 623], [1063, 623]];
+const areas = BTN.map((b, i) => {
+  const [x, w] = COLS[i % 3], [y, h] = ROWS[Math.floor(i / 3)];
+  return { bounds: { x, y, width: w, height: h }, action: b[4] };
+});
+BTN.forEach((b, i) => {
+  const a = areas[i].bounds;
+  $("#rm").insertAdjacentHTML("beforeend", `<div class="tl">${b[5] ? '<span class="hot">แนะนำ</span>' : ""}
+    <span class="ic" style="background:${b[1]}">${icon(b[0], 140, 1.8)}</span><b>${b[2]}</b><small>${b[3]}</small>
+    <span class="area">#${i + 1} ${b[4].type}<br>${a.x},${a.y} ${a.width}×${a.height}</span></div>`);
+  $("#tbl").insertAdjacentHTML("beforeend", `<tr><td>${i + 1}</td><td>${b[2]}</td><td><code>${a.x}, ${a.y}, ${a.width}, ${a.height}</code></td>
+    <td><code>${b[4].type}</code><br><code>${b[4].uri || b[4].data}</code></td></tr>`);
+});
+$("#json").textContent = JSON.stringify({
+  size: { width: 2500, height: 1686 }, selected: true, name: "purong-main-menu", chatBarText: "เมนูบริการ อบต.ปุโรง", areas,
+}, null, 2);
+
+function fit() { $("#rm").style.transform = `scale(${$("#fit").clientWidth / 2500})`; }
+addEventListener("resize", fit); fit();
+$("#tg").onclick = () => { $("#tg").classList.toggle("on", document.body.classList.toggle("show-areas")); };
+</script>
+</body>
+</html>

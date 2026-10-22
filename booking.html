@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>จองคิวบริการ อบต.ปุโรง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="stage">
+  <div class="phone">
+    <div id="head"></div>
+
+    <div class="liff-body" id="body">
+      <div class="hero-band" id="hero">
+        <span class="seal" id="seal"></span>
+        <div class="steps"><i class="on"></i><i></i><i></i></div>
+        <h1 id="h-title">เลือกบริการ</h1>
+        <p id="h-sub">ขั้นตอนที่ 1 จาก 3 · จองล่วงหน้าได้ 14 วัน</p>
+      </div>
+
+      <!-- step 1: service -->
+      <div class="section lift step" data-step="1">
+        <div class="card">
+          <div class="chips two" id="svcs" style="grid-template-columns:1fr"></div>
+        </div>
+      </div>
+
+      <!-- step 2: date + time -->
+      <div class="section lift step hidden" data-step="2">
+        <div class="card" id="svc-mini" style="display:flex;gap:12px;align-items:center;padding:12px 16px"></div>
+        <div class="card">
+          <h3>เลือกวันที่ <small id="month" style="margin-left:auto;font-weight:500;color:var(--ink-3);font-size:12.5px"></small></h3>
+          <div class="days" id="days"></div>
+        </div>
+        <div class="card">
+          <h3>เลือกช่วงเวลา</h3>
+          <div id="slot-wrap"></div>
+          <div class="legend"><span><i></i>ว่าง</span><span><i style="background:var(--brand);border-color:var(--brand)"></i>เลือก</span><span><i style="background:#f3f4f4"></i>เต็ม</span></div>
+        </div>
+      </div>
+
+      <!-- step 3: details -->
+      <div class="section lift step hidden" data-step="3">
+        <div class="card">
+          <h3>ข้อมูลผู้จอง</h3>
+          <div class="seg" id="for" style="margin-bottom:14px">
+            <button class="on" type="button">จองให้ตนเอง</button>
+            <button type="button">จองแทนผู้อื่น</button>
+          </div>
+          <div class="field"><label for="name">ชื่อ–นามสกุล <em>*</em></label><input class="input" id="name" value="สมชาย ใจดี"></div>
+          <div class="field"><label for="tel">เบอร์โทรศัพท์ <em>*</em></label><input class="input" id="tel" inputmode="tel" placeholder="08X-XXX-XXXX"></div>
+          <div class="field"><label for="vill">หมู่บ้าน</label><select class="select" id="vill"></select></div>
+          <div class="field"><label for="note">หมายเหตุถึงเจ้าหน้าที่</label><textarea class="textarea" id="note" style="min-height:70px" placeholder="(ถ้ามี)"></textarea></div>
+        </div>
+        <div class="card">
+          <h3>เอกสารที่ต้องเตรียม</h3>
+          <ul class="docs" id="docs"></ul>
+        </div>
+        <div class="card">
+          <h3>สรุปการจอง</h3>
+          <div class="sum" id="sum"></div>
+        </div>
+      </div>
+
+      <!-- result -->
+      <div class="hidden" id="done">
+        <div class="success">
+          <div class="ok" id="okic"></div>
+          <h2>จองคิวสำเร็จ</h2>
+          <p>แสดงบัตรคิวนี้กับเจ้าหน้าที่เมื่อมาถึง อบต.</p>
+        </div>
+        <div class="section" style="padding-top:12px">
+          <div class="ticket">
+            <div class="tk-top"><small id="t-dept"></small><div class="q" id="t-q"></div><small id="t-svc"></small></div>
+            <div class="tk-body"><div class="sum" id="t-sum"></div></div>
+            <div class="cut"></div>
+            <div class="tk-body" style="text-align:center">
+              <canvas class="qr" id="qr"></canvas>
+              <small style="color:var(--ink-3);font-size:11.5px">สแกนที่จุดบริการเพื่อยืนยันการมาถึง</small>
+            </div>
+          </div>
+          <div class="notice" style="margin-top:12px"><span id="bell"></span>ระบบจะส่งข้อความเตือนทาง LINE ก่อนถึงคิว 1 วัน และ 30 นาที กรุณามาก่อนเวลา 10 นาที</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sticky-cta" id="cta">
+      <button class="btn ghost hidden" id="prev">ย้อนกลับ</button>
+      <button class="btn primary" id="next" disabled>ถัดไป</button>
+    </div>
+    <div class="sticky-cta hidden" id="cta-done">
+      <button class="btn ghost" onclick="PR.toast('บันทึกลงปฏิทินแล้ว')">ลงปฏิทิน</button>
+      <a class="btn line" id="back-chat" href="index.html">กลับไปที่แชท</a>
+    </div>
+    <div class="home-ind"></div>
+  </div>
+  <aside class="notes"></aside>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+const { icon, thDate, TH_DAY, TH_DAY_FULL, TH_MONTH_FULL } = PR;
+const $ = (s) => document.querySelector(s);
+$("#head").innerHTML = PR.liffHeader("จองคิวรับบริการ");
+$("#seal").innerHTML = PR.seal(80);
+$("#okic").innerHTML = icon("check", 38, 2.6);
+$("#bell").innerHTML = icon("clock", 16);
+
+/* services: id, icon, name, dept, queue prefix, minutes, documents */
+const SVCS = [
+  ["tax", "coin", "ชำระภาษีที่ดินและสิ่งปลูกสร้าง", "กองคลัง", "A", 15, ["บัตรประชาชนเจ้าของที่ดิน", "สำเนาโฉนด / น.ส.3", "หนังสือแจ้งประเมินภาษี (ถ้ามี)"]],
+  ["elder", "elder", "ลงทะเบียนเบี้ยยังชีพผู้สูงอายุ", "สำนักปลัด", "B", 20, ["บัตรประชาชน", "สำเนาทะเบียนบ้าน", "สมุดบัญชีเงินฝากธนาคาร"]],
+  ["disab", "wheel", "ลงทะเบียนเบี้ยความพิการ", "สำนักปลัด", "B", 20, ["บัตรประจำตัวคนพิการ", "สำเนาทะเบียนบ้าน", "สมุดบัญชีเงินฝากธนาคาร"]],
+  ["child", "baby", "เงินอุดหนุนเพื่อการเลี้ยงดูเด็กแรกเกิด", "สำนักปลัด", "B", 20, ["สูติบัตรเด็ก", "บัตรประชาชนผู้ปกครอง", "สมุดบัญชีเงินฝากธนาคาร"]],
+  ["build", "building", "ขออนุญาตก่อสร้าง / ดัดแปลงอาคาร", "กองช่าง", "C", 30, ["แบบแปลนอาคาร", "สำเนาโฉนดที่ดิน", "บัตรประชาชนเจ้าของอาคาร"]],
+  ["water", "truck", "ขอรับน้ำอุปโภคบริโภค / ขอใช้รถน้ำ", "สำนักปลัด", "B", 10, ["บัตรประชาชน", "ระบุจุดที่ต้องการรับน้ำ"]],
+  ["school", "house", "สมัครเรียนศูนย์พัฒนาเด็กเล็ก", "กองการศึกษาฯ", "D", 20, ["สูติบัตรเด็ก", "สำเนาทะเบียนบ้าน", "สมุดวัคซีน"]],
+  ["doc", "doc", "ยื่นคำร้องทั่วไป / ขอข้อมูลข่าวสาร", "สำนักปลัด", "B", 15, ["บัตรประชาชน", "หนังสือคำร้อง (ถ้ามี)"]],
+];
+const HOLI = { "1-1": "วันขึ้นปีใหม่", "4-6": "วันจักรี", "4-13": "สงกรานต์", "4-14": "สงกรานต์", "4-15": "สงกรานต์", "5-1": "วันแรงงาน", "7-28": "วันเฉลิมฯ ร.10", "8-12": "วันแม่", "10-13": "วันนวมินทรมหาราช", "10-23": "วันปิยมหาราช", "12-5": "วันพ่อ", "12-10": "วันรัฐธรรมนูญ", "12-31": "สิ้นปี" };
+const SLOTS = ["08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "13:00", "13:30", "14:00", "14:30", "15:30"];
+const CAP = 3;
+
+let step = 1, svc = null, day = null, slot = null;
+
+/* step 1 */
+$("#svcs").innerHTML = SVCS.map((s, i) =>
+  `<button type="button" class="chip row" data-i="${i}"><span class="ci">${icon(s[1], 20)}</span><span>${s[2]}<small>${s[3]} · ใช้เวลาประมาณ ${s[5]} นาที</small></span></button>`).join("");
+$("#svcs").onclick = (e) => { const b = e.target.closest(".chip"); if (b) pickSvc(+b.dataset.i); };
+function pickSvc(i) {
+  svc = SVCS[i];
+  document.querySelectorAll("#svcs .chip").forEach((c) => c.classList.toggle("on", +c.dataset.i === i));
+  refresh();
+}
+const pre = SVCS.findIndex((s) => s[0] === new URLSearchParams(location.search).get("service"));
+if (pre >= 0) pickSvc(pre);
+
+/* step 2 */
+const days = [];
+for (let i = 1; days.length < 14; i++) {
+  const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + i);
+  const h = HOLI[`${d.getMonth() + 1}-${d.getDate()}`];
+  const wk = d.getDay() === 0 || d.getDay() === 6;
+  days.push({ d, off: wk ? "ปิดทำการ" : h || "" });
+}
+function hash(s) { let h = 7; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; }
+const left = (d, t) => Math.max(0, CAP - (hash(d.toDateString() + t + (svc ? svc[4] : "")) % (CAP + 2)));
+function drawDays() {
+  $("#days").innerHTML = days.map((x, i) => {
+    const free = x.off ? 0 : SLOTS.reduce((n, t) => n + (left(x.d, t) > 0), 0);
+    return `<button type="button" class="day ${x.off ? "off" : ""} ${day === i ? "on" : ""}" data-i="${i}" ${x.off ? "disabled" : ""}>
+      <small>${TH_DAY[x.d.getDay()]}</small><b>${x.d.getDate()}</b><span>${x.off ? x.off : "ว่าง " + free}</span></button>`;
+  }).join("");
+  const m = days[day ?? days.findIndex((x) => !x.off)].d;
+  $("#month").textContent = TH_MONTH_FULL[m.getMonth()] + " " + (m.getFullYear() + 543);
+}
+$("#days").onclick = (e) => { const b = e.target.closest(".day:not(.off)"); if (b) { day = +b.dataset.i; slot = null; drawDays(); drawSlots(); refresh(); } };
+function drawSlots() {
+  if (day === null) { $("#slot-wrap").innerHTML = `<p style="font-size:13px;color:var(--ink-3)">กรุณาเลือกวันที่ก่อน</p>`; return; }
+  const part = (label, list) => `<div style="font-size:12.5px;color:var(--ink-3);margin:4px 0 8px">${label}</div><div class="slots">${list.map((t) => {
+    const n = left(days[day].d, t);
+    return `<button type="button" class="slot ${n ? "" : "full"} ${slot === t ? "on" : ""}" data-t="${t}" ${n ? "" : "disabled"}>${t}<small>${n ? "เหลือ " + n : "เต็ม"}</small></button>`;
+  }).join("")}</div>`;
+  $("#slot-wrap").innerHTML = part("ช่วงเช้า", SLOTS.filter((t) => t < "12")) + `<div style="height:10px"></div>` + part("ช่วงบ่าย", SLOTS.filter((t) => t > "12"));
+}
+$("#slot-wrap").onclick = (e) => { const b = e.target.closest(".slot:not(.full)"); if (b) { slot = b.dataset.t; drawSlots(); refresh(); } };
+
+/* step 3 */
+PR.ORG.villages.forEach((v) => $("#vill").insertAdjacentHTML("beforeend", `<option>${v}</option>`));
+$("#for").onclick = (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  document.querySelectorAll("#for button").forEach((x) => x.classList.toggle("on", x === b));
+  $("#name").value = b === $("#for button") ? "สมชาย ใจดี" : "";
+  refresh();
+};
+["name", "tel"].forEach((id) => $("#" + id).addEventListener("input", refresh));
+const dateLabel = () => `${TH_DAY_FULL[days[day].d.getDay()]} ${thDate(days[day].d)}`;
+function drawSummary() {
+  $("#docs").innerHTML = svc[6].map((d) => `<li>${d}</li>`).join("");
+  $("#sum").innerHTML = [["บริการ", svc[2]], ["หน่วยงาน", svc[3]], ["วันที่", dateLabel()], ["เวลา", slot + " น."], ["สถานที่", "อบต.ปุโรง (ชั้น 1)"]]
+    .map(([k, v]) => `<div class="r"><span>${k}</span><span>${v}</span></div>`).join("");
+}
+
+/* navigation */
+const TITLES = ["", "เลือกบริการ", "เลือกวันและเวลา", "ยืนยันข้อมูล"];
+function canNext() {
+  if (step === 1) return !!svc;
+  if (step === 2) return day !== null && !!slot;
+  return $("#name").value.trim() && $("#tel").value.replace(/\D/g, "").length >= 9;
+}
+function refresh() { $("#next").disabled = !canNext(); }
+function go(n) {
+  step = n;
+  document.querySelectorAll(".step").forEach((s) => s.classList.toggle("hidden", +s.dataset.step !== n));
+  document.querySelectorAll(".steps i").forEach((s, i) => s.classList.toggle("on", i < n));
+  $("#h-title").textContent = TITLES[n];
+  $("#h-sub").textContent = `ขั้นตอนที่ ${n} จาก 3` + (n === 1 ? " · จองล่วงหน้าได้ 14 วัน" : "");
+  $("#prev").classList.toggle("hidden", n === 1);
+  $("#next").textContent = n === 3 ? "ยืนยันการจอง" : "ถัดไป";
+  if (n === 2) {
+    $("#svc-mini").innerHTML = `<span class="ci" style="width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand)">${icon(svc[1], 20)}</span>
+      <div style="flex:1;min-width:0"><b style="font-size:14px">${svc[2]}</b><div style="font-size:12px;color:var(--ink-3)">${svc[3]}</div></div>
+      <button style="color:var(--info);font-size:13px;font-weight:600" onclick="go(1)">เปลี่ยน</button>`;
+    drawDays(); drawSlots();
+  }
+  if (n === 3) drawSummary();
+  $("#body").scrollTop = 0;
+  refresh();
+}
+$("#prev").onclick = () => go(step - 1);
+$("#next").onclick = async () => {
+  if (step < 3) return go(step + 1);
+  await PR.loading(1100);
+  const q = svc[4] + String((hash(dateLabel() + slot) % 80) + 10).padStart(3, "0");
+  $("#t-dept").textContent = "หมายเลขคิว · " + svc[3];
+  $("#t-q").textContent = q;
+  $("#t-svc").textContent = svc[2];
+  $("#t-sum").innerHTML = [["ชื่อ", $("#name").value], ["วันที่", dateLabel()], ["เวลา", slot + " น."], ["สถานที่", "อบต.ปุโรง ชั้น 1 ช่องบริการ " + svc[3]]]
+    .map(([k, v]) => `<div class="r"><span>${k}</span><span>${v.replace(/</g, "&lt;")}</span></div>`).join("");
+  PR.fakeQR($("#qr"), q + dateLabel());
+  PR.store.get().queues.push({ id: q, svc: svc[2], ic: svc[1], dept: svc[3], day: PR.ymd(days[day].d), time: slot, name: $("#name").value, tel: $("#tel").value, vill: $("#vill").value, note: $("#note").value, s: "q", mine: true });
+  PR.store.save();
+  document.querySelectorAll(".step, #hero, #cta").forEach((el) => el.classList.add("hidden"));
+  $("#done").classList.remove("hidden"); $("#cta-done").classList.remove("hidden");
+  $("#back-chat").href = "index.html?" + new URLSearchParams({ event: "booking", q, svc: svc[2], date: thDate(days[day].d), time: slot });
+  $("#body").scrollTop = 0;
+};
+go(1);
+</script>
+</body>
+</html>

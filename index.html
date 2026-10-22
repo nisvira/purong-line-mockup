@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LINE OA อบต.ปุโรง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="stage">
+  <div class="phone">
+    <!-- LINE chat header -->
+    <div class="chat-head">
+      <button aria-label="ย้อนกลับ" id="hb-back"></button>
+      <div class="grow">
+        <div class="name"><span id="oa-badge" class="badge-oa"></span>อบต.ปุโรง</div>
+      </div>
+      <div class="icons" id="head-icons"></div>
+    </div>
+
+    <!-- conversation -->
+    <div class="chat-body" id="chat">
+      <div class="day-chip" id="day-chip">วันนี้</div>
+    </div>
+
+    <!-- Rich Menu (2500x1686 large, 6 areas + banner) -->
+    <div class="richmenu" id="richmenu">
+      <div class="rm-img">
+        <div class="rm-banner">
+          <span id="rm-seal"></span>
+          <div>
+            <div class="t1">อบต.ปุโรง e-Service</div>
+            <div class="t2">บริการประชาชน 24 ชม. ผ่าน LINE</div>
+          </div>
+          <span class="pill">อ.กรงปินัง จ.ยะลา</span>
+        </div>
+        <a class="rm-tile hl" href="complaint.html" data-ic="megaphone" data-bg="#d64545">ร้องเรียน / แจ้งเหตุ<small>ไฟดับ ถนน ขยะ น้ำ</small></a>
+        <a class="rm-tile" href="booking.html" data-ic="calendar" data-bg="#0a6b34">จองคิวบริการ<small>ไม่ต้องรอนาน</small></a>
+        <a class="rm-tile" href="track.html" data-ic="search" data-bg="#2a72d4">ติดตามสถานะ<small>เรื่อง / คิวของฉัน</small></a>
+        <button class="rm-tile" data-act="news" data-ic="news" data-bg="#c9971c">ข่าวสาร / ประกาศ<small>กิจกรรม อบต.</small></button>
+        <button class="rm-tile" data-act="tax" data-ic="coin" data-bg="#0f8c8c">ภาษี &amp; ค่าธรรมเนียม<small>ที่ดิน ป้าย ขยะ</small></button>
+        <button class="rm-tile" data-act="contact" data-ic="phone" data-bg="#7a4cc2">ติดต่อ อบต.<small>เบอร์โทร แผนที่</small></button>
+      </div>
+    </div>
+
+    <!-- footer bar -->
+    <div class="chat-foot" id="foot">
+      <button class="kb" id="kb" aria-label="สลับเป็นแป้นพิมพ์"></button>
+      <button class="menu-toggle" id="menu-toggle">เมนูบริการ อบต.ปุโรง <span id="chev"></span></button>
+      <form class="chat-input" id="form">
+        <input id="txt" placeholder="พิมพ์ข้อความ… (ลอง: ร้องเรียน, คิว, ภาษี)" autocomplete="off">
+        <button class="send" aria-label="ส่ง" id="send"></button>
+      </form>
+    </div>
+    <div class="home-ind"></div>
+  </div>
+  <aside class="notes"></aside>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+const { icon, seal, thDate, hhmm } = PR;
+const $ = (s) => document.querySelector(s);
+const chat = $("#chat");
+
+/* ---------- static UI icons ---------- */
+$("#hb-back").innerHTML = icon("back", 24);
+$("#oa-badge").innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+$("#head-icons").innerHTML = icon("search", 22) + icon("phone", 22) + icon("menu", 22);
+$("#rm-seal").innerHTML = seal(34);
+$("#kb").innerHTML = icon("keyboard", 24);
+$("#chev").innerHTML = icon("chevDown", 16, 2.4);
+$("#send").innerHTML = icon("send", 22);
+document.querySelectorAll(".rm-tile").forEach((t) => {
+  t.insertAdjacentHTML("afterbegin", `<span class="ic" style="background:${t.dataset.bg}">${icon(t.dataset.ic, 24, 2)}</span>`);
+});
+$("#day-chip").textContent = "วันนี้ · " + thDate(new Date());
+
+/* ---------- message rendering ---------- */
+const AV = `<span class="av">${seal(36)}</span>`;
+function scroll() { requestAnimationFrame(() => (chat.scrollTop = chat.scrollHeight)); }
+
+function addMe(text) {
+  chat.insertAdjacentHTML("beforeend",
+    `<div class="msg me"><div class="col"><div class="bubble">${text}</div></div><div class="meta"><span>อ่านแล้ว</span><span>${hhmm()}</span></div></div>`);
+  scroll();
+}
+function addBot(html, { wide = false, bubble = true } = {}) {
+  chat.insertAdjacentHTML("beforeend",
+    `<div class="msg">${AV}<div class="col ${wide ? "wide" : ""}">${bubble ? `<div class="bubble">${html}</div>` : html}</div><span class="time">${hhmm()}</span></div>`);
+  scroll();
+}
+function botSay(items, delay = 650) {
+  // items: array of [html, opts]; shows a typing indicator between each
+  return items.reduce((p, [html, opts]) => p.then(() => new Promise((r) => {
+    const t = document.createElement("div");
+    t.className = "msg";
+    t.innerHTML = `${AV}<div class="col"><div class="bubble typing"><i></i><i></i><i></i></div></div>`;
+    chat.appendChild(t); scroll();
+    setTimeout(() => { t.remove(); addBot(html, opts); r(); }, delay);
+  })), Promise.resolve());
+}
+function quickReplies(list) {
+  chat.querySelector(".quick")?.remove();
+  const q = document.createElement("div");
+  q.className = "quick";
+  q.innerHTML = list.map(([label]) => `<button>${label}</button>`).join("");
+  q.querySelectorAll("button").forEach((b, i) => b.onclick = () => { q.remove(); list[i][1](); });
+  chat.appendChild(q); scroll();
+}
+
+/* ---------- flex message builders ---------- */
+const NEWS = PR.store.get().news.filter((n) => n.pub).sort((a, b) => b.at - a.at).slice(0, 3).map((n) => {
+  const [tag, col] = PR.NEWS_CAT[n.cat];
+  return { tag, t: n.t.replace(/</g, "&lt;"), d: (n.body || "").replace(/</g, "&lt;"), bg: `linear-gradient(135deg,${col},${col}bb)` };
+});
+function newsCarousel() {
+  return `<div class="carousel">${NEWS.map((n) => `
+    <div class="flex">
+      <div class="hero" style="background:${n.bg}"><span class="tag">${n.tag}</span>${PR.icon("news", 34, 1.5)}</div>
+      <div class="fb"><h4>${n.t}</h4><p>${n.d}</p></div>
+      <div class="ff"><a class="fbtn line" href="news.html">อ่านต่อ</a></div>
+    </div>`).join("")}
+    <div class="flex" style="display:grid;place-items:center;min-height:240px">
+      <a class="fbtn" href="news.html" style="display:grid;gap:6px;justify-items:center">${PR.icon("chevRight", 30)}ดูข่าวทั้งหมด</a>
+    </div></div>`;
+}
+function taxCard() {
+  return `<div class="flex" style="width:260px">
+    <div class="hero" style="background:linear-gradient(135deg,#0f8c8c,#0a5e30);height:84px">ภาษีและค่าธรรมเนียม ปี ${new Date().getFullYear() + 543}</div>
+    <div class="fb">
+      <div class="row"><span>ภาษีที่ดินและสิ่งปลูกสร้าง</span><b>ภายใน เม.ย.</b></div>
+      <div class="row"><span>ภาษีป้าย</span><b>ภายใน มี.ค.</b></div>
+      <div class="row"><span>ค่าธรรมเนียมเก็บขยะ</span><b>รายเดือน</b></div>
+      <hr class="divider">
+      <p>ชำระได้ที่กองคลัง อบต.ปุโรง วันจันทร์–ศุกร์ 08:30–16:30 น. แนะนำจองคิวล่วงหน้าเพื่อลดเวลารอ</p>
+    </div>
+    <div class="ff">
+      <a class="fbtn solid" href="booking.html?service=tax">จองคิวชำระภาษี</a>
+      <a class="fbtn line" href="track.html">ตรวจสอบรายการของฉัน</a>
+    </div></div>`;
+}
+function contactCard() {
+  return `<div class="flex" style="width:262px">
+    <div class="fb" style="padding-top:14px">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">${seal(40)}<div><h4 style="margin:0">อบต.ปุโรง</h4><p>อ.กรงปินัง จ.ยะลา</p></div></div>
+      <p>${PR.ORG.address}</p>
+      <hr class="divider">
+      <div class="row"><span>เวลาทำการ</span><b>จ.–ศ. 08:30–16:30</b></div>
+      <div class="row"><span>โทรศัพท์</span><b>0-7329-XXXX</b></div>
+    </div>
+    <div class="ff">
+      <a class="fbtn solid" href="contact.html">ดูเบอร์ติดต่อแต่ละกอง</a>
+      <button class="fbtn line" onclick="PR.toast('เปิด Google Maps')">นำทางไป อบต.</button>
+    </div></div>`;
+}
+function statusCard(head, sub, rows, btn) {
+  return `<div class="flex status" style="width:262px">
+    <div class="head"><small>${sub}</small><b>${head}</b></div>
+    <div class="fb" style="padding-top:12px">${rows.map(([k, v]) => `<div class="row"><span>${k}</span><b style="text-align:right;max-width:60%">${v}</b></div>`).join("")}</div>
+    <div class="ff">${btn}</div></div>`;
+}
+
+/* ---------- actions ---------- */
+const ACT = {
+  news() {
+    addMe("ข่าวสาร / ประกาศ");
+    botSay([["ข่าวประชาสัมพันธ์ล่าสุดจาก อบต.ปุโรง ค่ะ 📢"], [newsCarousel(), { wide: true, bubble: false }]]);
+  },
+  tax() {
+    addMe("ภาษี & ค่าธรรมเนียม");
+    botSay([[taxCard(), { bubble: false }]]).then(() =>
+      quickReplies([["จองคิวชำระภาษี", () => (location.href = "booking.html?service=tax")], ["เอกสารที่ต้องใช้", ACT.taxDocs]]));
+  },
+  taxDocs() {
+    addMe("เอกสารที่ต้องใช้");
+    botSay([["เอกสารสำหรับชำระภาษีที่ดินฯ\n• บัตรประชาชนเจ้าของที่ดิน\n• สำเนาโฉนด / น.ส.3\n• หนังสือแจ้งประเมินภาษี (ถ้ามี)\n• หนังสือมอบอำนาจ (กรณีให้ผู้อื่นมาแทน)"]]);
+  },
+  contact() {
+    addMe("ติดต่อ อบต.");
+    botSay([[contactCard(), { bubble: false }]]);
+  },
+};
+document.querySelectorAll("[data-act]").forEach((b) => (b.onclick = () => ACT[b.dataset.act]()));
+
+/* ---------- typed messages (simple keyword bot) ---------- */
+function reply(text) {
+  const t = text.trim();
+  if (/ร้องเรียน|แจ้ง|ไฟ|ถนน|ขยะ|น้ำ/.test(t))
+    return botSay([["แจ้งเรื่องร้องเรียนได้ทันทีผ่านแบบฟอร์มนี้ แนบรูปและพิกัดได้ค่ะ"],
+      [`<div class="flex" style="width:240px"><div class="fb" style="padding-top:12px"><h4>แจ้งเรื่องร้องเรียน / แจ้งเหตุ</h4><p>เจ้าหน้าที่จะตอบรับภายใน 1 วันทำการ</p></div><div class="ff"><a class="fbtn solid" href="complaint.html">เปิดแบบฟอร์ม</a></div></div>`, { bubble: false }]]);
+  if (/คิว|จอง/.test(t))
+    return botSay([["เลือกบริการและวันเวลาที่สะดวกได้เลยค่ะ"],
+      [`<div class="flex" style="width:240px"><div class="fb" style="padding-top:12px"><h4>จองคิวรับบริการ</h4><p>ภาษี เบี้ยยังชีพ ขออนุญาตก่อสร้าง ฯลฯ</p></div><div class="ff"><a class="fbtn solid" href="booking.html">จองคิว</a></div></div>`, { bubble: false }]]);
+  if (/ภาษี/.test(t)) return botSay([[taxCard(), { bubble: false }]]);
+  if (/ข่าว|ประกาศ/.test(t)) return botSay([[newsCarousel(), { wide: true, bubble: false }]]);
+  if (/ติดต่อ|โทร|เบอร์|ที่อยู่/.test(t)) return botSay([[contactCard(), { bubble: false }]]);
+  if (/สถานะ|ติดตาม/.test(t)) return botSay([["ตรวจสอบสถานะเรื่องและคิวของคุณได้ที่นี่ค่ะ"], [`<div class="flex" style="width:240px"><div class="ff" style="padding-top:12px"><a class="fbtn solid" href="track.html">ติดตามสถานะ</a></div></div>`, { bubble: false }]]);
+  if (/สวัสดี|หวัดดี|hello|hi/i.test(t)) return botSay([["สวัสดีค่ะ 🙏 ต้องการติดต่อเรื่องใด เลือกจากเมนูด้านล่างได้เลยค่ะ"]]);
+  return botSay([["ขออภัยค่ะ ระบบอัตโนมัติยังไม่เข้าใจข้อความนี้ 🙏\nเจ้าหน้าที่จะตอบกลับในเวลาทำการ (จ.–ศ. 08:30–16:30 น.)"]])
+    .then(() => quickReplies([["ร้องเรียน", () => { addMe("ร้องเรียน"); reply("ร้องเรียน"); }], ["จองคิว", () => { addMe("จองคิว"); reply("จองคิว"); }], ["ติดต่อ อบต.", ACT.contact]]));
+}
+
+/* ---------- footer: keyboard <-> rich menu ---------- */
+const foot = $("#foot"), rm = $("#richmenu"), tg = $("#menu-toggle");
+tg.onclick = () => { rm.classList.toggle("closed"); tg.classList.toggle("closed"); };
+$("#kb").onclick = () => {
+  const typing = foot.classList.toggle("typing-mode");
+  $("#kb").innerHTML = icon(typing ? "menu" : "keyboard", 24);
+  rm.classList.toggle("closed", typing);
+  tg.classList.toggle("closed", typing);
+  if (typing) $("#txt").focus();
+};
+$("#form").onsubmit = (e) => {
+  e.preventDefault();
+  const v = $("#txt").value.trim();
+  if (!v) return;
+  $("#txt").value = "";
+  addMe(v.replace(/</g, "&lt;"));
+  reply(v);
+};
+
+/* ---------- initial conversation ---------- */
+const qs = new URLSearchParams(location.search);
+const ev = qs.get("event");
+if (ev) { rm.classList.add("closed"); tg.classList.add("closed"); }
+addBot("สวัสดีค่ะ ยินดีต้อนรับสู่ LINE Official Account\nองค์การบริหารส่วนตำบลปุโรง 🌿\nอ.กรงปินัง จ.ยะลา");
+addBot("ท่านสามารถ\n✅ แจ้งเรื่องร้องเรียน / แจ้งเหตุ\n✅ จองคิวรับบริการล่วงหน้า\n✅ ติดตามสถานะเรื่องของท่าน\nผ่านเมนูด้านล่างได้ตลอด 24 ชั่วโมงค่ะ 👇");
+
+if (ev === "complaint") {
+  botSay([[statusCard(qs.get("id"), "รับเรื่องร้องเรียนเรียบร้อย", [
+      ["ประเภท", qs.get("cat")], ["พื้นที่", qs.get("vill")], ["สถานะ", "รอเจ้าหน้าที่ตรวจสอบ"], ["วันที่แจ้ง", thDate(new Date())],
+    ], `<a class="fbtn solid" href="track.html?id=${encodeURIComponent(qs.get("id"))}">ติดตามสถานะ</a>`), { bubble: false }],
+    ["ขอบคุณที่แจ้งเรื่องค่ะ 🙏 ระบบจะแจ้งเตือนทาง LINE ทุกครั้งที่สถานะเปลี่ยน"]], 900);
+} else if (ev === "booking") {
+  botSay([[statusCard("คิว " + qs.get("q"), "ยืนยันการจองคิวสำเร็จ", [
+      ["บริการ", qs.get("svc")], ["วันที่", qs.get("date")], ["เวลา", qs.get("time") + " น."], ["สถานที่", qs.get("place") || "อบต.ปุโรง"],
+    ], `<a class="fbtn solid" href="track.html?tab=queue">ดูบัตรคิว</a><button class="fbtn line" onclick="PR.toast('ยกเลิก / เลื่อนนัด (ตัวอย่าง)')">เลื่อนหรือยกเลิกคิว</button>`), { bubble: false }],
+    ["📌 ระบบจะส่งข้อความเตือนก่อนถึงคิว 1 วัน และ 30 นาที\nกรุณานำเอกสารตามรายการมาด้วยค่ะ"]], 900);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ติดตามสถานะ อบต.ปุโรง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="stage">
+  <div class="phone">
+    <div id="head"></div>
+    <div class="liff-body" id="body">
+      <div class="hero-band">
+        <span class="seal" id="seal"></span>
+        <h1>ติดตามสถานะ</h1>
+        <p>เรื่องร้องเรียนและคิวรับบริการของคุณ</p>
+      </div>
+      <div class="section lift">
+        <form class="card" id="search" style="display:flex;gap:8px;padding:10px">
+          <input class="input" id="q" placeholder="ค้นหาเลขที่เรื่อง เช่น PR-69-0412" style="border:0;background:var(--bg)">
+          <button class="btn primary" style="flex:0 0 48px;height:44px" id="sbtn" aria-label="ค้นหา"></button>
+        </form>
+        <div class="seg" id="tabs" style="margin-bottom:12px;background:#e3e9e5">
+          <button class="on" data-t="c">เรื่องร้องเรียน</button>
+          <button data-t="q">คิวของฉัน</button>
+        </div>
+        <div class="card" id="list"></div>
+        <div class="card hidden" id="detail"></div>
+      </div>
+    </div>
+    <div class="home-ind"></div>
+  </div>
+  <aside class="notes"></aside>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+const { icon, thDate } = PR;
+const $ = (s) => document.querySelector(s);
+$("#head").innerHTML = PR.liffHeader("ติดตามสถานะ");
+$("#seal").innerHTML = PR.seal(80);
+$("#sbtn").innerHTML = icon("search", 20);
+
+const { ST, QST } = PR;
+const db = PR.store.get();
+
+// citizen view: เรื่อง/คิวของ "ฉัน" (ข้อมูลตัวอย่างที่ติดธง mine หรือเรื่องตัวอย่าง 3 รายการ)
+const DEMO = ["0412", "0387", "0421"];
+const want = new URLSearchParams(location.search).get("id");
+const COMPLAINTS = db.complaints.filter((c) => c.mine || c.id === want || DEMO.some((n) => c.id.endsWith(n)))
+  .map((c) => ({ ...c, tl: PR.complaintTimeline(c), rate: c.s === "done" }));
+const QUEUES = db.queues.filter((q) => q.mine).sort((a, b) => b.day.localeCompare(a.day))
+  .map((q) => ({ ...q, t: q.svc, d: thDate(PR.fromYmd(q.day)) }));
+
+const qs = new URLSearchParams(location.search);
+if (qs.get("id") && !COMPLAINTS.some((c) => c.id === qs.get("id"))) {
+  COMPLAINTS.unshift({ id: qs.get("id"), ic: "megaphone", t: "เรื่องที่แจ้งล่าสุด", v: "ตำบลปุโรง", s: "wait", dept: "รอมอบหมาย",
+    tl: [["done", "รับเรื่องเข้าระบบ", thDate(new Date()) + " · " + PR.hhmm() + " น."], ["now", "รอเจ้าหน้าที่ตรวจสอบ", "ภายใน 1 วันทำการ"], ["todo", "ลงพื้นที่ดำเนินการ"], ["todo", "แจ้งผลการดำเนินการ"]] });
+}
+
+let tab = qs.get("tab") === "queue" ? "q" : "c";
+function drawList(filter = "") {
+  $("#detail").classList.add("hidden"); $("#list").classList.remove("hidden");
+  document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.t === tab));
+  if (tab === "c") {
+    const rows = COMPLAINTS.filter((c) => !filter || c.id.toLowerCase().includes(filter.toLowerCase()));
+    $("#list").innerHTML = rows.length ? rows.map((c) => `
+      <a class="list-item" href="#" data-id="${c.id}">
+        <span class="li-ic">${icon(c.ic, 20)}</span>
+        <span class="li-tx"><b>${c.t.replace(/</g, "&lt;")}</b><small>${c.id} · ${c.v}</small></span>
+        <span class="pill ${c.s}">${ST[c.s]}</span>
+      </a>`).join("") : `<p style="text-align:center;color:var(--ink-3);font-size:13.5px;padding:16px 0">ไม่พบเลขที่เรื่อง “${filter.replace(/</g, "&lt;")}”</p>`;
+  } else {
+    $("#list").innerHTML = QUEUES.map((q) => `
+      <div class="list-item">
+        <span class="li-ic" style="background:#f1e8ff;color:#6a3bbf;font-weight:800;font-size:13px">${q.id}</span>
+        <span class="li-tx"><b>${q.t}</b><small>${q.d} · ${q.time} น. · ${q.dept}</small></span>
+        <span class="pill ${q.s}">${QST[q.s]}</span>
+      </div>`).join("") +
+      `<a class="btn primary" href="booking.html" style="margin-top:14px;height:42px">${icon("plus", 18)} จองคิวใหม่</a>`;
+  }
+}
+function drawDetail(id) {
+  const c = COMPLAINTS.find((x) => x.id === id);
+  $("#list").classList.add("hidden"); $("#detail").classList.remove("hidden");
+  $("#detail").innerHTML = `
+    <button style="color:var(--info);font-size:13px;font-weight:600;display:flex;align-items:center;gap:2px;margin-bottom:10px" id="bk">${icon("back", 16)} รายการทั้งหมด</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><small style="color:var(--ink-3)">${c.id}</small><span class="pill ${c.s}">${ST[c.s]}</span></div>
+    <h3 style="font-size:16px;line-height:1.45;margin-bottom:10px">${c.t.replace(/</g, "&lt;")}</h3>
+    <div class="sum"><div class="r"><span>พื้นที่</span><span>${c.v}</span></div><div class="r"><span>หน่วยงาน</span><span>${c.dept}</span></div></div>
+    <hr class="divider">
+    <ul class="timeline">${c.tl.map(([k, b, s, p]) => `<li class="${k}"><b>${b}</b>${s ? `<small>${s}</small>` : ""}${p ? `<p>${p}</p>` : ""}</li>`).join("")}</ul>
+    ${c.rate ? `<hr class="divider"><div style="text-align:center"><b style="font-size:14px">ประเมินความพึงพอใจ</b>
+      <div id="stars" style="display:flex;justify-content:center;gap:6px;margin-top:8px;color:#d9ddda">${[1, 2, 3, 4, 5].map((i) => `<button data-i="${i}">${icon("star", 30, 1.6)}</button>`).join("")}</div></div>` : ""}`;
+  $("#bk").onclick = () => drawList();
+  const st = $("#stars");
+  if (st) st.onclick = (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    st.querySelectorAll("button").forEach((x) => { const on = +x.dataset.i <= +b.dataset.i; x.style.color = on ? "#f2b01e" : ""; x.querySelector("svg").setAttribute("fill", on ? "currentColor" : "none"); });
+    PR.toast("ขอบคุณสำหรับการประเมิน");
+  };
+}
+$("#list").onclick = (e) => { const a = e.target.closest("a[data-id]"); if (a) { e.preventDefault(); drawDetail(a.dataset.id); } };
+$("#tabs").onclick = (e) => { const b = e.target.closest("button"); if (b) { tab = b.dataset.t; drawList(); } };
+$("#search").onsubmit = (e) => { e.preventDefault(); tab = "c"; drawList($("#q").value.trim()); };
+
+drawList();
+if (qs.get("id")) drawDetail(qs.get("id"));
+</script>
+</body>
+</html>

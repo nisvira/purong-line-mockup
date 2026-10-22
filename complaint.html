@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>แจ้งเรื่องร้องเรียน อบต.ปุโรง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="stage">
+  <div class="phone">
+    <div id="head"></div>
+
+    <!-- ===== form ===== -->
+    <div class="liff-body" id="form-view">
+      <div class="hero-band">
+        <span class="seal" id="seal"></span>
+        <h1>แจ้งเรื่องร้องเรียน / แจ้งเหตุ</h1>
+        <p>แจ้งปัญหาในพื้นที่ตำบลปุโรง เจ้าหน้าที่จะตอบรับภายใน 1 วันทำการ</p>
+      </div>
+
+      <div class="section lift">
+        <div class="card">
+          <h3><span class="n">1</span>ประเภทเรื่อง <em style="color:var(--danger);font-style:normal">*</em></h3>
+          <div class="chips" id="cats"></div>
+        </div>
+
+        <div class="card">
+          <h3><span class="n">2</span>รายละเอียด</h3>
+          <div class="field">
+            <label for="title">หัวเรื่อง <em>*</em></label>
+            <input class="input" id="title" placeholder="เช่น ไฟถนนดับ 3 ต้น หน้ามัสยิด">
+          </div>
+          <div class="field">
+            <label for="detail">รายละเอียดเพิ่มเติม <em>*</em></label>
+            <textarea class="textarea" id="detail" maxlength="500" placeholder="อธิบายปัญหา ระยะเวลาที่เกิด ผลกระทบ"></textarea>
+            <div class="hint"><span id="cnt">0</span>/500 ตัวอักษร</div>
+          </div>
+          <div class="field">
+            <label>รูปภาพประกอบ (สูงสุด 3 รูป)</label>
+            <div class="upload" id="photos">
+              <label class="add" for="file"><span id="cam"></span>เพิ่มรูป</label>
+            </div>
+            <input type="file" id="file" accept="image/*" multiple hidden>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3><span class="n">3</span>สถานที่เกิดเหตุ</h3>
+          <div class="field">
+            <label for="vill">หมู่บ้าน <em>*</em></label>
+            <select class="select" id="vill"><option value="">— เลือกหมู่บ้าน —</option></select>
+          </div>
+          <div class="field">
+            <label for="place">จุดสังเกต</label>
+            <input class="input" id="place" placeholder="เช่น ใกล้โรงเรียน / ถนน รพช. สายบาโงยีรา">
+          </div>
+          <div class="field">
+            <div class="mapbox" id="map">
+              <div class="river"></div>
+              <div class="road" style="left:0;right:0;top:58%;height:10px"></div>
+              <div class="road" style="left:30%;top:0;bottom:0;width:8px"></div>
+              <span class="pin" id="pinic"></span>
+              <span class="lbl" id="maplbl">ยังไม่ได้ระบุตำแหน่ง</span>
+            </div>
+            <button class="btn ghost" type="button" id="gps" style="width:100%;margin-top:8px;height:40px;font-size:14px"></button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3><span class="n">4</span>ข้อมูลผู้แจ้ง</h3>
+          <div class="seg" id="anon" style="margin-bottom:14px">
+            <button class="on" data-v="0" type="button">ระบุตัวตน</button>
+            <button data-v="1" type="button">ไม่ประสงค์ออกนาม</button>
+          </div>
+          <div id="who">
+            <div class="field">
+              <label for="name">ชื่อ–นามสกุล <em>*</em></label>
+              <input class="input" id="name" value="สมชาย ใจดี">
+              <div class="hint">ดึงจากโปรไฟล์ LINE · แก้ไขได้</div>
+            </div>
+            <div class="field">
+              <label for="tel">เบอร์โทรศัพท์ <em>*</em></label>
+              <input class="input" id="tel" inputmode="tel" placeholder="08X-XXX-XXXX">
+            </div>
+          </div>
+          <div class="notice hidden" id="anon-note"><span id="info-ic"></span>เรื่องที่ไม่ระบุตัวตนจะไม่สามารถติดต่อกลับได้ แต่ยังติดตามสถานะผ่าน LINE ได้ตามปกติ</div>
+          <hr class="divider">
+          <label class="check"><input type="checkbox" id="agree">ข้าพเจ้ายืนยันว่าข้อมูลเป็นความจริง และยินยอมให้ อบต.ปุโรง ใช้ข้อมูลเพื่อดำเนินการตามคำร้อง ตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== success ===== -->
+    <div class="liff-body hidden" id="done-view">
+      <div class="success">
+        <div class="ok" id="okic"></div>
+        <h2>ส่งเรื่องเรียบร้อยแล้ว</h2>
+        <p>ระบบจะแจ้งความคืบหน้าผ่าน LINE ของท่าน</p>
+      </div>
+      <div class="section" style="padding-top:12px">
+        <div class="ticket">
+          <div class="tk-top"><small>เลขที่เรื่อง</small><div class="q" id="tid" style="font-size:30px"></div></div>
+          <div class="tk-body">
+            <div class="sum" id="sum"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <h3>ขั้นตอนถัดไป</h3>
+          <ul class="timeline">
+            <li class="done"><b>รับเรื่องเข้าระบบ</b><small id="now"></small></li>
+            <li class="now"><b>เจ้าหน้าที่ตรวจสอบ / ส่งต่อกองที่รับผิดชอบ</b><small>ภายใน 1 วันทำการ</small></li>
+            <li class="todo"><b>ลงพื้นที่ดำเนินการ</b></li>
+            <li class="todo"><b>แจ้งผลการดำเนินการ</b></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="sticky-cta" id="cta">
+      <button class="btn primary" id="submit" disabled>ส่งเรื่องร้องเรียน</button>
+    </div>
+    <div class="sticky-cta hidden" id="cta-done">
+      <a class="btn ghost" id="track-link" href="track.html">ติดตาม</a>
+      <a class="btn line" id="back-chat" href="index.html">กลับไปที่แชท</a>
+    </div>
+    <div class="home-ind"></div>
+  </div>
+  <aside class="notes"></aside>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+const { icon } = PR;
+const $ = (s) => document.querySelector(s);
+$("#head").innerHTML = PR.liffHeader("แจ้งเรื่องร้องเรียน");
+$("#seal").innerHTML = PR.seal(80);
+$("#cam").innerHTML = icon("camera", 22);
+$("#pinic").innerHTML = `<svg width="30" height="30" viewBox="0 0 24 24"><path fill="currentColor" d="M12 22s-7-6.3-7-12a7 7 0 0 1 14 0c0 5.7-7 12-7 12Z"/><circle cx="12" cy="10" r="2.6" fill="#fff"/></svg>`;
+$("#pinic").style.display = "none";
+$("#gps").innerHTML = icon("pin", 18) + "ใช้ตำแหน่งปัจจุบัน";
+$("#info-ic").innerHTML = icon("info", 16);
+$("#okic").innerHTML = icon("check", 38, 2.6);
+
+/* categories → responsible division */
+const CATS = [
+  ["bulb", "ไฟฟ้าส่องสว่าง", "กองช่าง"],
+  ["road", "ถนน / ทางชำรุด", "กองช่าง"],
+  ["drop", "น้ำประปา / น้ำท่วม", "กองช่าง"],
+  ["trash", "ขยะ / สิ่งแวดล้อม", "สำนักปลัด"],
+  ["tree", "ต้นไม้ / กิ่งไม้", "สำนักปลัด"],
+  ["alert", "สาธารณภัย / เหตุด่วน", "สำนักปลัด (ป้องกันฯ)"],
+  ["megaphone", "เหตุเดือดร้อนรำคาญ", "สำนักปลัด"],
+  ["shield", "ทุจริต / ประพฤติมิชอบ", "หน่วยตรวจสอบภายใน"],
+  ["dots", "เรื่องอื่น ๆ", "สำนักปลัด"],
+];
+let cat = null;
+$("#cats").innerHTML = CATS.map(([ic, l], i) => `<button type="button" class="chip" data-i="${i}"><span class="ci">${icon(ic, 20)}</span>${l}</button>`).join("");
+$("#cats").onclick = (e) => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  document.querySelectorAll("#cats .chip").forEach((c) => c.classList.toggle("on", c === b));
+  cat = CATS[b.dataset.i];
+  if (cat[1].startsWith("ทุจริต")) setAnon(true);
+  validate();
+};
+
+PR.ORG.villages.forEach((v) => $("#vill").insertAdjacentHTML("beforeend", `<option>${v}</option>`));
+
+/* photos */
+const photos = [];
+$("#file").onchange = (e) => {
+  [...e.target.files].slice(0, 3 - photos.length).forEach((f) => photos.push(URL.createObjectURL(f)));
+  drawPhotos(); e.target.value = "";
+};
+function drawPhotos() {
+  document.querySelectorAll("#photos .ph").forEach((p) => p.remove());
+  photos.forEach((u, i) => $("#photos .add").insertAdjacentHTML("beforebegin",
+    `<div class="ph" style="background-image:url('${u}')"><button type="button" data-i="${i}">×</button></div>`));
+  $("#photos .add").style.display = photos.length >= 3 ? "none" : "";
+}
+$("#photos").onclick = (e) => { const b = e.target.closest(".ph button"); if (b) { photos.splice(+b.dataset.i, 1); drawPhotos(); } };
+
+/* location */
+let located = false;
+$("#gps").onclick = async () => {
+  await PR.loading(700);
+  located = true;
+  $("#pinic").style.display = "";
+  $("#maplbl").textContent = "📍 6.4732, 101.2867 (ตัวอย่าง)";
+  PR.toast("ระบุตำแหน่งแล้ว");
+};
+
+/* anonymous */
+function setAnon(on) {
+  document.querySelectorAll("#anon button").forEach((b) => b.classList.toggle("on", (b.dataset.v === "1") === on));
+  $("#who").classList.toggle("hidden", on);
+  $("#anon-note").classList.toggle("hidden", !on);
+  validate();
+}
+$("#anon").onclick = (e) => { const b = e.target.closest("button"); if (b) setAnon(b.dataset.v === "1"); };
+
+/* validation */
+const anon = () => $("#anon .on").dataset.v === "1";
+function validate() {
+  const ok = cat && $("#title").value.trim() && $("#detail").value.trim() && $("#vill").value && $("#agree").checked &&
+    (anon() || ($("#name").value.trim() && $("#tel").value.replace(/\D/g, "").length >= 9));
+  $("#submit").disabled = !ok;
+}
+["title", "detail", "vill", "agree", "name", "tel"].forEach((id) => $("#" + id).addEventListener("input", validate));
+$("#agree").addEventListener("change", validate);
+$("#detail").addEventListener("input", () => ($("#cnt").textContent = $("#detail").value.length));
+
+/* submit */
+$("#submit").onclick = async () => {
+  await PR.loading(1100);
+  const id = "PR-" + String(new Date().getFullYear() + 543).slice(2) + "-" + String(Math.floor(Math.random() * 9000) + 1000);
+  $("#tid").textContent = id;
+  $("#now").textContent = PR.thDate(new Date()) + " · " + PR.hhmm() + " น.";
+  const rows = [
+    ["ประเภท", cat[1]], ["หัวเรื่อง", $("#title").value], ["พื้นที่", $("#vill").value],
+    ["หน่วยงานรับผิดชอบ", cat[2]], ["ผู้แจ้ง", anon() ? "ไม่ประสงค์ออกนาม" : $("#name").value],
+    ["รูปภาพ", photos.length + " รูป"], ["พิกัด", located ? "ระบุแล้ว" : "ไม่ได้ระบุ"],
+  ];
+  PR.store.get().complaints.unshift({ id, ic: cat[0], cat: cat[1], t: $("#title").value, detail: $("#detail").value, v: $("#vill").value, dept: cat[2], s: "wait",
+    name: anon() ? "" : $("#name").value, tel: anon() ? "" : $("#tel").value, anon: anon(), photos: photos.length, located, created: Date.now(), log: [{ at: Date.now(), b: "รับเรื่องเข้าระบบ" }], mine: true });
+  PR.store.save();
+  $("#sum").innerHTML = rows.map(([k, v]) => `<div class="r"><span>${k}</span><span>${v.replace(/</g, "&lt;")}</span></div>`).join("");
+  $("#form-view").classList.add("hidden"); $("#cta").classList.add("hidden");
+  $("#done-view").classList.remove("hidden"); $("#cta-done").classList.remove("hidden");
+  $("#track-link").href = "track.html?id=" + id;
+  $("#back-chat").href = "index.html?" + new URLSearchParams({ event: "complaint", id, cat: cat[1], vill: $("#vill").value });
+};
+</script>
+</body>
+</html>
